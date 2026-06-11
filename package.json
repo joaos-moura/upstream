@@ -1,0 +1,27 @@
+{
+  "name": "upstream",
+  "version": "0.1.0",
+  "description": "Claude Code plugin: enforce PRD/ADR before feature development",
+  "type": "module",
+  "bin": {
+    "upstream": "./bin/upstream.js"
+  },
+  "files": ["bin", "src", "templates"],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:hook": "npx bats tests/hook/"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "bats": "^1.11.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
