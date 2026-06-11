@@ -1,8 +1,10 @@
 import { copyFile, mkdir, writeFile, access, chmod } from 'fs/promises'
 import { join, dirname } from 'path'
 
+const HOOK_SRC = 'hooks/upstream-check.sh'
+
 const FILE_MAP = [
-  ['hooks/upstream-check.sh',    '.claude/hooks/upstream-check.sh'],
+  [HOOK_SRC,                     '.claude/hooks/upstream-check.sh'],
   ['skills/upstream-guard.md',   '.claude/plugins/upstream/skills/upstream-guard.md'],
   ['skills/upstream-prd.md',     '.claude/plugins/upstream/skills/upstream-prd.md'],
   ['skills/upstream-adr.md',     '.claude/plugins/upstream/skills/upstream-adr.md'],
@@ -25,7 +27,8 @@ export async function scaffoldInto(targetDir, templatesDir) {
   }
 
   // Make hook executable
-  await chmod(join(targetDir, '.claude/hooks/upstream-check.sh'), 0o755)
+  const hookDest = FILE_MAP.find(([src]) => src === HOOK_SRC)[1]
+  await chmod(join(targetDir, hookDest), 0o755)
 
   // Config: only write if absent (never overwrite org customizations)
   const configDest = join(targetDir, 'upstream.config.yaml')
