@@ -1,8 +1,14 @@
 import http from 'http'
 import { URL } from 'url'
-import { randomBytes } from 'crypto'
+import { randomBytes, createHash } from 'crypto'
 import open from 'open'
 import { setProviderToken } from '../tokens.js'
+
+export function generatePKCE() {
+  const verifier = randomBytes(32).toString('base64url')
+  const challenge = createHash('sha256').update(verifier).digest('base64url')
+  return { verifier, challenge }
+}
 
 export async function findFreePort() {
   return new Promise((resolve, reject) => {
@@ -60,12 +66,15 @@ export async function runOAuthFlow(providerId, providerDef, appConfig) {
   const port = await findFreePort()
   const redirectUri = `http://localhost:${port}/callback`
   const state = randomBytes(16).toString('hex')
+  const { verifier, challenge } = generatePKCE()
 
   const authUrl = new URL(providerDef.authUrl)
   authUrl.searchParams.set('client_id', appConfig.client_id)
   authUrl.searchParams.set('redirect_uri', redirectUri)
   authUrl.searchParams.set('response_type', 'code')
   authUrl.searchParams.set('state', state)
+  authUrl.searchParams.set('code_challenge', challenge)
+  authUrl.searchParams.set('code_challenge_method', 'S256')
   if (providerDef.scopes?.length) authUrl.searchParams.set('scope', providerDef.scopes.join(' '))
   for (const [k, v] of Object.entries(providerDef.authParams ?? {})) authUrl.searchParams.set(k, v)
 
@@ -74,7 +83,7 @@ export async function runOAuthFlow(providerId, providerDef, appConfig) {
   try { await open(authUrl.toString()) } catch { /* user has URL in console */ }
 
   const code = await waitForCallback(port, state)
-  const tokenResponse = await providerDef.exchangeCode(code, appConfig.client_id, appConfig.client_secret, redirectUri)
+  const tokenResponse = await providerDef.exchangeCode(code, appConfig.client_id, redirectUri, verifier)
 
   const identity = await providerDef.getIdentity(tokenResponse.access_token, tokenResponse)
 
