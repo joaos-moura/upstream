@@ -1,5 +1,6 @@
 // src/lib/providers/google-docs.js
 import https from 'https'
+import { randomBytes } from 'crypto'
 import { setProviderToken } from '../tokens.js'
 
 export function extractId(url) {
@@ -53,7 +54,10 @@ export async function getIdentity(accessToken) {
         let parsed
         try { parsed = JSON.parse(data) } catch { parsed = null }
         if (res.statusCode === 200 && parsed) resolve(parsed)
-        else reject(new Error(`Failed to get Google identity (${res.statusCode})`))
+        else {
+          const msg = parsed?.error?.message || `Failed to get Google identity (${res.statusCode})`
+          reject(new Error(msg))
+        }
       })
     })
     req.on('error', reject)
@@ -133,7 +137,7 @@ export async function refreshTokenIfNeeded(tokenData, appConfig) {
 }
 
 export async function createDocument(title, content, destination, tokenData) {
-  const boundary = 'upstream_multipart_boundary'
+  const boundary = `upstream_boundary_${randomBytes(16).toString('hex')}`
   const metadata = JSON.stringify({
     name: title,
     mimeType: 'application/vnd.google-apps.document',
