@@ -1,0 +1,88 @@
+import http from 'http'
+import { URL } from 'url'
+import { randomBytes } from 'crypto'
+import open from 'open'
+import { setProviderToken } from '../tokens.js'
+
+export async function findFreePort() {
+  return new Promise((resolve, reject) => {
+    const srv = http.createServer()
+    srv.listen(0, () => {
+      const { port } = srv.address()
+      srv.close(() => resolve(port))
+    })
+    srv.on('error', reject)
+  })
+}
+
+export function waitForCallback(port, expectedState) {
+  return new Promise((resolve, reject) => {
+    const srv = http.createServer((req, res) => {
+      const u = new URL(req.url, `http://localhost:${port}`)
+      const code = u.searchParams.get('code')
+      const error = u.searchParams.get('error')
+      const state = u.searchParams.get('state')
+
+      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.end('<html><body><h2>upstream: Authentication complete. You can close this tab.</h2></body></html>')
+      srv.close()
+
+      if (error) reject(new Error(`OAuth cancelled: ${error}`))
+      else if (state !== expectedState) reject(new Error('OAuth state mismatch — possible CSRF attempt'))
+      else if (code) resolve(code)
+      else reject(new Error('No authorization code received'))
+    })
+
+    srv.listen(port)
+    srv.on('error', reject)
+    setTimeout(
+      () => { srv.close(); reject(new Error('Authentication timed out after 5 minutes')) },
+      5 * 60 * 1000
+    )
+  })
+}
+
+export async function runOAuthFlow(providerId, providerDef, appConfig) {
+  const domainValue = appConfig[providerDef.domainField]
+  if (!domainValue) {
+    throw new Error(
+      `${providerDef.domainField} is not configured in upstream.config.yaml integrations.${providerDef.configKey}`
+    )
+  }
+
+  const port = await findFreePort()
+  const redirectUri = `http://localhost:${port}/callback`
+  const state = randomBytes(16).toString('hex')
+
+  const authUrl = new URL(providerDef.authUrl)
+  authUrl.searchParams.set('client_id', appConfig.client_id)
+  authUrl.searchParams.set('redirect_uri', redirectUri)
+  authUrl.searchParams.set('response_type', 'code')
+  authUrl.searchParams.set('state', state)
+  if (providerDef.scopes?.length) authUrl.searchParams.set('scope', providerDef.scopes.join(' '))
+  for (const [k, v] of Object.entries(providerDef.authParams ?? {})) authUrl.searchParams.set(k, v)
+
+  console.log(`Opening browser for ${providerId} authentication...`)
+  console.log(`If browser doesn't open, visit:\n  ${authUrl.toString()}`)
+  try { await open(authUrl.toString()) } catch { /* user has URL in console */ }
+
+  const code = await waitForCallback(port, state)
+  const tokenResponse = await providerDef.exchangeCode(code, appConfig.client_id, appConfig.client_secret, redirectUri)
+
+  const identity = await providerDef.getIdentity(tokenResponse.access_token, tokenResponse)
+
+  if (!providerDef.validateDomain(identity, appConfig)) {
+    throw new Error(
+      `Your account does not belong to the ${providerDef.domainField} configured for this org (expected: ${domainValue})`
+    )
+  }
+
+  let tokenData = {
+    access_token: tokenResponse.access_token,
+    refresh_token: tokenResponse.refresh_token ?? null,
+    expiry: tokenResponse.expires_in ? Date.now() + tokenResponse.expires_in * 1000 : null,
+  }
+  if (providerDef.enrichToken) tokenData = providerDef.enrichToken(tokenData, identity, appConfig)
+
+  setProviderToken(providerId, tokenData)
+}
