@@ -1,6 +1,7 @@
 // tests/unit/google-docs-provider.test.js
 import { describe, it, expect } from 'vitest'
 import { extractId, validateDomain } from '../../src/lib/providers/google-docs.js'
+import { exchangeCode } from '../../src/lib/providers/google-docs.js'
 
 describe('extractId', () => {
   it('extracts ID from standard Google Docs URL', () => {
@@ -46,5 +47,12 @@ describe('validateDomain', () => {
 
   it('returns false when email is missing', () => {
     expect(validateDomain({}, { allowed_domain: 'acme.com' })).toBe(false)
+  })
+})
+
+describe('exchangeCode', () => {
+  it('is a function accepting 4 params (no client_secret)', () => {
+    expect(typeof exchangeCode).toBe('function')
+    expect(exchangeCode.length).toBe(4)
   })
 })

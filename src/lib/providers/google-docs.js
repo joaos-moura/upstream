@@ -8,13 +8,13 @@ export function extractId(url) {
   return match ? match[1] : null
 }
 
-export function exchangeCode(code, clientId, clientSecret, redirectUri) {
+export function exchangeCode(code, clientId, redirectUri, codeVerifier) {
   const body = new URLSearchParams({
     code,
     client_id: clientId,
-    client_secret: clientSecret,
     redirect_uri: redirectUri,
     grant_type: 'authorization_code',
+    code_verifier: codeVerifier,
   }).toString()
 
   return new Promise((resolve, reject) => {
@@ -101,7 +101,6 @@ export async function refreshTokenIfNeeded(tokenData, appConfig) {
   const body = new URLSearchParams({
     refresh_token: tokenData.refresh_token,
     client_id: appConfig.client_id,
-    client_secret: appConfig.client_secret,
     grant_type: 'refresh_token',
   }).toString()
 
