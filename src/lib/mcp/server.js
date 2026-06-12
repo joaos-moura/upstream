@@ -18,16 +18,16 @@ const TOOLS = [
   },
   {
     name: 'create_document',
-    description: 'Create a new document in the connected provider (notion, confluence, google-docs) and return its URL.',
+    description: 'Create a new document in the connected provider (confluence, google-docs) and return its URL.',
     inputSchema: {
       type: 'object',
       properties: {
-        provider: { type: 'string', description: 'Provider name: notion, confluence, or google-docs' },
+        provider: { type: 'string', description: 'Provider name: confluence or google-docs' },
         title: { type: 'string', description: 'Document title' },
-        content: { type: 'string', description: 'Initial document content. Google Docs: HTML. Confluence: storage format (XHTML-based). Notion: plain text.' },
+        content: { type: 'string', description: 'Initial document content. Google Docs: HTML. Confluence: storage format (XHTML-based).' },
         destination: {
           type: 'string',
-          description: 'Parent location. Notion: parent page ID. Confluence: "SPACE_KEY" or "SPACE_KEY:parent_page_id". Google Docs: parent folder ID (optional).',
+          description: 'Parent location. Confluence: "SPACE_KEY" or "SPACE_KEY:parent_page_id". Google Docs: parent folder ID (optional).',
         },
       },
       required: ['provider', 'title', 'destination'],

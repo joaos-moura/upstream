@@ -42,9 +42,9 @@ describe('tokens', () => {
   })
 
   it('setProviderToken merges with existing providers', () => {
-    setProviderToken('notion', { access_token: 'notion-tok' })
+    setProviderToken('confluence', { access_token: 'confluence-tok' })
     setProviderToken('google-docs', { access_token: 'google-tok' })
-    expect(getProviderToken('notion')).toEqual({ access_token: 'notion-tok' })
+    expect(getProviderToken('confluence')).toEqual({ access_token: 'confluence-tok' })
     expect(getProviderToken('google-docs')).toEqual({ access_token: 'google-tok' })
   })
 })

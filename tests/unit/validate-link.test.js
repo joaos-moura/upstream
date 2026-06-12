@@ -9,7 +9,6 @@ vi.mock('../../src/lib/config.js', () => ({
   readConfig: vi.fn(() => ({
     integrations: {
       google_docs: { client_id: 'cid', client_secret: 'csec', allowed_domain: 'acme.com' },
-      notion: { client_id: 'ncid', client_secret: 'ncsec', allowed_workspace: 'acme' },
       confluence: { client_id: 'ccid', client_secret: 'ccsec', allowed_domain: 'acme.atlassian.net' },
     },
   })),
@@ -19,15 +18,6 @@ vi.mock('../../src/lib/providers/google-docs.js', () => ({
   extractId: vi.fn(),
   getMetadata: vi.fn(),
   refreshTokenIfNeeded: vi.fn(),
-  exchangeCode: vi.fn(),
-  getIdentity: vi.fn(),
-  validateDomain: vi.fn(),
-  createDocument: vi.fn(),
-}))
-
-vi.mock('../../src/lib/providers/notion.js', () => ({
-  extractId: vi.fn(),
-  getMetadata: vi.fn(),
   exchangeCode: vi.fn(),
   getIdentity: vi.fn(),
   validateDomain: vi.fn(),
@@ -47,7 +37,6 @@ vi.mock('../../src/lib/providers/confluence.js', () => ({
 
 import { getProviderToken } from '../../src/lib/tokens.js'
 import { extractId as googleExtractId, getMetadata as googleGetMetadata, refreshTokenIfNeeded as googleRefresh } from '../../src/lib/providers/google-docs.js'
-import { extractId as notionExtractId, getMetadata as notionGetMetadata } from '../../src/lib/providers/notion.js'
 import { extractId as confluenceExtractId, getMetadata as confluenceGetMetadata, refreshTokenIfNeeded as confluenceRefresh } from '../../src/lib/providers/confluence.js'
 import { validateLink } from '../../src/lib/mcp/tools/validate-link.js'
 
@@ -90,26 +79,6 @@ describe('validateLink — Google Docs', () => {
     const result = await validateLink('https://docs.google.com/document/d/doc123/edit')
     expect(result.valid).toBe(false)
     expect(result.error).toBe('File not found')
-  })
-})
-
-describe('validateLink — Notion', () => {
-  it('returns not-authenticated when no token', async () => {
-    getProviderToken.mockReturnValue(null)
-    const result = await validateLink('https://www.notion.so/My-Page-abc123def456abc123def456abc12345')
-    expect(result.provider).toBe('notion')
-    expect(result.error).toBe('not authenticated')
-    expect(result.valid).toBe(true)
-  })
-
-  it('returns title and last_edited when authenticated', async () => {
-    const token = { access_token: 'ntok', refresh_token: null, expiry: null }
-    getProviderToken.mockReturnValue(token)
-    notionExtractId.mockReturnValue('abc123def456abc123def456abc12345')
-    notionGetMetadata.mockResolvedValue({ title: 'PRD Auth', last_edited: '2026-06-10T08:00:00.000Z' })
-
-    const result = await validateLink('https://www.notion.so/My-Page-abc123def456abc123def456abc12345')
-    expect(result).toEqual({ valid: true, title: 'PRD Auth', provider: 'notion', last_edited: '2026-06-10T08:00:00.000Z', error: null })
   })
 })
 

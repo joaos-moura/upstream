@@ -25,7 +25,7 @@ adr_triggers:
 docs_path: docs/upstream/
 
 # 'local': full PRD/ADR content stored in this repo
-# 'link': stub file with URL + metadata; actual doc lives in Notion/Confluence/etc.
+# 'link': stub file with URL + metadata; actual doc lives in Confluence/Google Docs/etc.
 docs_storage: local
 
 # Integrations — OAuth credentials per provider (set by platform engineer, commit to repo)
@@ -35,7 +35,7 @@ docs_storage: local
 #     client_secret: "GOCSPX-..."
 #     # Create credentials at: https://console.cloud.google.com/apis/credentials
 #     # Enable: Google Drive API → OAuth 2.0 Client ID → Desktop app
-#     # Add authorized redirect URI: http://localhost (any port)
+#     # (Desktop app type allows localhost automatically — no redirect URI config needed)
 
 # Link enforcement policy (optional — both fields are opt-in)
 # link_policy:

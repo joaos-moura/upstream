@@ -36,21 +36,6 @@ describe('upstream auth', () => {
     expect(output).toContain('google-docs')
   })
 
-  it('shows error when notion credentials missing from config', () => {
-    mkdirSync(TMP, { recursive: true })
-    writeFileSync(join(TMP, 'upstream.config.yaml'), 'version: 1\n')
-
-    let output = ''
-    try {
-      execSync(`node ${CLI} auth notion`, { cwd: TMP, stdio: 'pipe' })
-    } catch (err) {
-      output = err.stderr?.toString() || err.stdout?.toString() || ''
-    }
-    rmSync(TMP, { recursive: true, force: true })
-
-    expect(output).toMatch(/client_id|credentials|configure/i)
-  })
-
   it('shows error when confluence credentials missing from config', () => {
     mkdirSync(TMP, { recursive: true })
     writeFileSync(join(TMP, 'upstream.config.yaml'), 'version: 1\n')
@@ -81,7 +66,7 @@ describe('upstream auth', () => {
     expect(output).toMatch(/unknown provider/i)
   })
 
-  it('auth status shows notion and confluence', () => {
+  it('auth status shows confluence', () => {
     mkdirSync(TMP, { recursive: true })
     writeFileSync(join(TMP, 'upstream.config.yaml'), 'version: 1\n')
     process.env.UPSTREAM_TOKENS_PATH = join(TMP, 'tokens.json')
@@ -90,7 +75,6 @@ describe('upstream auth', () => {
     rmSync(TMP, { recursive: true, force: true })
     delete process.env.UPSTREAM_TOKENS_PATH
 
-    expect(output).toContain('notion')
     expect(output).toContain('confluence')
   })
 })
