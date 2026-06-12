@@ -17,6 +17,9 @@ async function validateGoogleDocsLink(url) {
   try {
     const config = readConfig(join(process.cwd(), 'upstream.config.yaml'))
     const { client_id, client_secret } = config.integrations?.google_docs ?? {}
+    if (!client_id || !client_secret) {
+      return { valid: true, title: null, provider: 'google-docs', last_edited: null, error: 'google_docs credentials not configured' }
+    }
     const token = await refreshTokenIfNeeded(tokenData, client_id, client_secret)
     const metadata = await getFileMetadata(docId, token.access_token)
     return {

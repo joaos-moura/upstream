@@ -17,7 +17,7 @@ export function readTokens() {
 export function writeTokens(tokens) {
   const p = tokensPath()
   mkdirSync(dirname(p), { recursive: true })
-  writeFileSync(p, JSON.stringify(tokens, null, 2) + '\n', 'utf8')
+  writeFileSync(p, JSON.stringify(tokens, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 })
 }
 
 export function getProviderToken(provider) {

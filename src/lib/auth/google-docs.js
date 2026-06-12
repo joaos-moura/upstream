@@ -64,8 +64,9 @@ function exchangeCode(code, clientId, clientSecret, redirectUri) {
       let data = ''
       res.on('data', chunk => { data += chunk })
       res.on('end', () => {
-        if (res.statusCode === 200) resolve(JSON.parse(data))
-        else reject(new Error(`Token exchange failed (${res.statusCode}): ${data}`))
+        if (res.statusCode === 200) {
+          try { resolve(JSON.parse(data)) } catch { reject(new Error('Token exchange: invalid JSON response')) }
+        } else reject(new Error(`Token exchange failed (${res.statusCode}): ${data}`))
       })
     })
     req.on('error', reject)

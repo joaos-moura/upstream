@@ -28,6 +28,7 @@ export async function startMcpServer() {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params
     if (name === 'validate_link') {
+      if (typeof args?.url !== 'string') throw new Error('validate_link requires a string url argument')
       const result = await validateLink(args.url)
       return { content: [{ type: 'text', text: JSON.stringify(result) }] }
     }

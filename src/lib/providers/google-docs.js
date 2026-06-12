@@ -16,8 +16,9 @@ export async function getFileMetadata(docId, accessToken) {
       let data = ''
       res.on('data', chunk => { data += chunk })
       res.on('end', () => {
-        const parsed = JSON.parse(data)
-        if (res.statusCode === 200) resolve(parsed)
+        let parsed
+        try { parsed = JSON.parse(data) } catch { parsed = null }
+        if (res.statusCode === 200 && parsed) resolve(parsed)
         else {
           const msg = parsed?.error?.message || `Drive API error ${res.statusCode}`
           const err = new Error(msg)
@@ -54,8 +55,9 @@ export async function refreshTokenIfNeeded(tokenData, clientId, clientSecret) {
       let data = ''
       res.on('data', chunk => { data += chunk })
       res.on('end', () => {
-        if (res.statusCode === 200) resolve(JSON.parse(data))
-        else reject(new Error(`Token refresh failed (${res.statusCode}): ${data}`))
+        if (res.statusCode === 200) {
+          try { resolve(JSON.parse(data)) } catch { reject(new Error(`Token refresh: invalid JSON response`)) }
+        } else reject(new Error(`Token refresh failed (${res.statusCode}): ${data}`))
       })
     })
     req.on('error', reject)
