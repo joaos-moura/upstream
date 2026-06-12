@@ -2,6 +2,7 @@ import chalk from 'chalk'
 import { join } from 'path'
 import { fileURLToPath } from 'url'
 import { scaffoldInto } from '../lib/scaffold.js'
+import { writeMcpSettings } from '../lib/settings.js'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const TEMPLATES = join(__dirname, '../../templates')
@@ -12,6 +13,7 @@ export async function initCommand() {
 
   try {
     await scaffoldInto(target, TEMPLATES)
+    writeMcpSettings(target)
     console.log(chalk.green('✓ upstream initialized'))
     console.log('')
     console.log('Next steps:')
