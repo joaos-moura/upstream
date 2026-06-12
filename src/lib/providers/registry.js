@@ -7,6 +7,14 @@ import {
   refreshTokenIfNeeded as googleDocsRefreshTokenIfNeeded,
   createDocument as googleDocsCreateDocument,
 } from './google-docs.js'
+import {
+  extractId as notionExtractId,
+  exchangeCode as notionExchangeCode,
+  getIdentity as notionGetIdentity,
+  getMetadata as notionGetMetadata,
+  validateDomain as notionValidateDomain,
+  createDocument as notionCreateDocument,
+} from './notion.js'
 
 export const PROVIDERS = {
   'google-docs': {
@@ -28,5 +36,22 @@ export const PROVIDERS = {
     validateDomain: googleDocsValidateDomain,
     refreshTokenIfNeeded: googleDocsRefreshTokenIfNeeded,
     createDocument: googleDocsCreateDocument,
+  },
+  'notion': {
+    configKey: 'notion',
+    urlPattern: /notion\.so\//,
+    supportsRefresh: false,
+    domainField: 'allowed_workspace',
+    authUrl: 'https://api.notion.com/v1/oauth/authorize',
+    scopes: [],
+    authParams: { owner: 'user' },
+    enrichToken: null,
+    extractId: notionExtractId,
+    exchangeCode: notionExchangeCode,
+    getIdentity: notionGetIdentity,
+    getMetadata: notionGetMetadata,
+    validateDomain: notionValidateDomain,
+    refreshTokenIfNeeded: null,
+    createDocument: notionCreateDocument,
   },
 }
