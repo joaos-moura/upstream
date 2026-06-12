@@ -24,7 +24,7 @@ while IFS= read -r line; do
       pattern="${BASH_REMATCH[1]}"
       pattern="${pattern//\'/}"
       pattern="${pattern//\"/}"
-      if [[ "$BRANCH" == ${pattern}* ]]; then
+      if [[ "$BRANCH" == "${pattern}"* ]]; then
         BYPASS="yes"
         break
       fi

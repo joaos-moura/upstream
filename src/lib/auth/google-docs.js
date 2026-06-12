@@ -1,6 +1,7 @@
 import http from 'http'
 import https from 'https'
 import { URL } from 'url'
+import { randomBytes } from 'crypto'
 import open from 'open'
 import { setProviderToken } from '../tokens.js'
 
@@ -18,18 +19,20 @@ async function findFreePort() {
   })
 }
 
-function waitForCallback(port) {
+function waitForCallback(port, expectedState) {
   return new Promise((resolve, reject) => {
     const srv = http.createServer((req, res) => {
       const u = new URL(req.url, `http://localhost:${port}`)
       const code = u.searchParams.get('code')
       const error = u.searchParams.get('error')
+      const state = u.searchParams.get('state')
 
       res.writeHead(200, { 'Content-Type': 'text/html' })
       res.end('<html><body><h2>upstream: Authentication complete. You can close this tab.</h2></body></html>')
       srv.close()
 
       if (error) reject(new Error(`OAuth cancelled: ${error}`))
+      else if (state !== expectedState) reject(new Error('OAuth state mismatch — possible CSRF attempt'))
       else if (code) resolve(code)
       else reject(new Error('No authorization code received'))
     })
@@ -78,6 +81,7 @@ function exchangeCode(code, clientId, clientSecret, redirectUri) {
 export async function authenticateGoogleDocs(clientId, clientSecret) {
   const port = await findFreePort()
   const redirectUri = `http://localhost:${port}/callback`
+  const state = randomBytes(16).toString('hex')
 
   const authUrl = new URL(GOOGLE_AUTH_URL)
   authUrl.searchParams.set('client_id', clientId)
@@ -86,13 +90,14 @@ export async function authenticateGoogleDocs(clientId, clientSecret) {
   authUrl.searchParams.set('scope', SCOPE)
   authUrl.searchParams.set('access_type', 'offline')
   authUrl.searchParams.set('prompt', 'consent')
+  authUrl.searchParams.set('state', state)
 
   console.log('Opening browser for Google authentication...')
   console.log(`If browser doesn't open, visit:\n  ${authUrl.toString()}`)
 
   try { await open(authUrl.toString()) } catch { /* user has URL in console */ }
 
-  const code = await waitForCallback(port)
+  const code = await waitForCallback(port, state)
   const tokenResponse = await exchangeCode(code, clientId, clientSecret, redirectUri)
 
   setProviderToken('google-docs', {
