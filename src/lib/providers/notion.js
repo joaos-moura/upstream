@@ -89,6 +89,12 @@ export async function getMetadata(pageId, accessToken) {
   })
 }
 
+function chunkText(text, maxLen = 2000) {
+  const chunks = []
+  for (let i = 0; i < text.length; i += maxLen) chunks.push(text.slice(i, i + maxLen))
+  return chunks
+}
+
 export async function createDocument(title, content, destination, tokenData) {
   if (!destination) throw new Error('Notion createDocument requires a destination page ID')
   const body = JSON.stringify({
@@ -97,7 +103,11 @@ export async function createDocument(title, content, destination, tokenData) {
       title: { title: [{ type: 'text', text: { content: title } }] },
     },
     children: content
-      ? [{ object: 'block', type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content } }] } }]
+      ? chunkText(content).map(chunk => ({
+          object: 'block',
+          type: 'paragraph',
+          paragraph: { rich_text: [{ type: 'text', text: { content: chunk } }] },
+        }))
       : [],
   })
 
