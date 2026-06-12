@@ -13,7 +13,7 @@ afterEach(() => { rmSync(TARGET, { recursive: true, force: true }) })
 
 describe('upstream init — .claude/settings.json', () => {
   it('creates .claude/settings.json with MCP entry', () => {
-    execSync(`node ${CLI} init`, { cwd: TARGET })
+    execSync(`node ${CLI} init --yes`, { cwd: TARGET })
     const settings = JSON.parse(readFileSync(join(TARGET, '.claude/settings.json'), 'utf8'))
     expect(settings.mcpServers.upstream).toEqual({ command: 'npx', args: ['upstream', 'mcp'] })
   })
@@ -22,7 +22,7 @@ describe('upstream init — .claude/settings.json', () => {
     mkdirSync(join(TARGET, '.claude'), { recursive: true })
     writeFileSync(join(TARGET, '.claude/settings.json'), JSON.stringify({ permissions: { allow: ['Bash'] } }))
 
-    execSync(`node ${CLI} init`, { cwd: TARGET })
+    execSync(`node ${CLI} init --yes`, { cwd: TARGET })
 
     const settings = JSON.parse(readFileSync(join(TARGET, '.claude/settings.json'), 'utf8'))
     expect(settings.mcpServers.upstream).toEqual({ command: 'npx', args: ['upstream', 'mcp'] })
@@ -30,7 +30,7 @@ describe('upstream init — .claude/settings.json', () => {
   })
 
   it('upstream upgrade also writes MCP entry', () => {
-    execSync(`node ${CLI} init`, { cwd: TARGET })
+    execSync(`node ${CLI} init --yes`, { cwd: TARGET })
 
     // Simulate old settings without MCP entry
     const settingsPath = join(TARGET, '.claude/settings.json')

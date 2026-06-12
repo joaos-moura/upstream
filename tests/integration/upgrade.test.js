@@ -11,7 +11,7 @@ const CLI = join(__dirname, '../../bin/upstream.js')
 beforeEach(() => {
   mkdirSync(TARGET, { recursive: true })
   execSync('git init -q', { cwd: TARGET })
-  execSync(`node ${CLI} init`, { cwd: TARGET })
+  execSync(`node ${CLI} init --yes`, { cwd: TARGET })
 })
 afterEach(() => { rmSync(TARGET, { recursive: true, force: true }) })
 
