@@ -163,27 +163,52 @@ export async function refreshTokenIfNeeded(tokenData, appConfig) {
   return updated
 }
 
+function getSpaceId(spaceKey, baseUrl, accessToken) {
+  const host = new URL(baseUrl).hostname
+  return new Promise((resolve, reject) => {
+    const req = https.get({
+      hostname: host,
+      path: `/wiki/api/v2/spaces?keys=${encodeURIComponent(spaceKey)}&limit=1`,
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+    }, (res) => {
+      let data = ''
+      res.on('data', chunk => { data += chunk })
+      res.on('end', () => {
+        let parsed
+        try { parsed = JSON.parse(data) } catch { parsed = null }
+        if (res.statusCode === 200 && parsed?.results?.[0]?.id) {
+          resolve(parsed.results[0].id)
+        } else {
+          reject(new Error(`Could not find Confluence space with key "${spaceKey}" (${res.statusCode})`))
+        }
+      })
+    })
+    req.on('error', reject)
+  })
+}
+
 // destination format: "SPACE_KEY" or "SPACE_KEY:parent_page_id"
 export async function createDocument(title, content, destination, tokenData) {
   if (!destination) throw new Error('Confluence createDocument requires a destination (SPACE_KEY or SPACE_KEY:parent_page_id)')
   if (!tokenData?.base_url) throw new Error('Confluence createDocument requires base_url in token data (re-run: upstream auth confluence)')
 
-  const [spaceKey, ancestorId] = destination.split(':')
+  const [spaceKey, parentId] = destination.split(':')
   const host = new URL(tokenData.base_url).hostname
 
+  const spaceId = await getSpaceId(spaceKey, tokenData.base_url, tokenData.access_token)
+
   const pageBody = {
-    type: 'page',
+    spaceId,
     title,
-    space: { key: spaceKey },
-    body: { storage: { value: content || '', representation: 'storage' } },
-    ...(ancestorId ? { ancestors: [{ id: ancestorId }] } : {}),
+    body: { representation: 'storage', value: content || '' },
+    ...(parentId ? { parentId } : {}),
   }
   const bodyStr = JSON.stringify(pageBody)
 
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: host,
-      path: '/wiki/rest/api/content',
+      path: '/wiki/api/v2/pages',
       method: 'POST',
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
@@ -199,7 +224,7 @@ export async function createDocument(title, content, destination, tokenData) {
         try { parsed = JSON.parse(data) } catch { parsed = null }
         if ((res.statusCode === 200 || res.statusCode === 201) && parsed) {
           const webuiPath = parsed._links?.webui
-          const url = webuiPath
+          const url = webuiPath?.startsWith('/')
             ? `${tokenData.base_url}${webuiPath}`
             : `${tokenData.base_url}/wiki/spaces/${spaceKey}/pages/${parsed.id}`
           resolve({ url })
