@@ -8,11 +8,13 @@ You are the upstream guard. Your job: ensure documentation exists before develop
 ## Step 1 — Classify the request
 
 Analyze three signals:
+
 1. The user's prompt
 2. Current git branch: run `git rev-parse --abbrev-ref HEAD`
 3. Recent commits: run `git log --oneline -5`
 
 Classify as one of:
+
 - **feature**: new capability, endpoint, UI, integration, or user-facing behavior
 - **bug**: fixing existing broken behavior with a clear expected state
 - **fix**: non-breaking correction (typo, minor config, wording)
@@ -34,6 +36,7 @@ Classify as one of:
 4. If no filename match, check if any PRD file's content contains the branch name or slug.
 
 **If PRD found:**
+
 - Read the file
 - Check each field in `prd_required_fields` has non-empty content (not just a heading or comment)
 - If any field is empty or missing: "PRD found but incomplete. Missing: **[field1]**, **[field2]**. Please fill these in — I can help if you'd like." Block until resolved.
@@ -41,7 +44,7 @@ Classify as one of:
 
 **If no PRD found:** Check `docs_storage` from config, then present options. If `docs_storage: link`, show option 4 first and mark it as recommended.
 
-```
+```text
 No PRD found for this feature. Choose how to proceed:
 
 1. **Import** — you have an existing document (Notion, Confluence, email, etc.) to bring in
@@ -70,6 +73,7 @@ Based on the choice, invoke `upstream-prd` with mode `import`, `interview`, `aut
 **If no trigger applies:** Note "No ADR required." and proceed to Step 4.
 
 **If a trigger applies:**
+
 - Search `<docs_path>/ADR-*.md` for a relevant ADR
 - If found and it covers the decision: proceed to Step 4
 - If not found: "This feature requires an ADR for **[reason]**. Invoking upstream-adr." Invoke `upstream-adr` with mode `interview` (unless the user specifies). After it completes, proceed to Step 4.
@@ -78,7 +82,7 @@ Based on the choice, invoke `upstream-prd` with mode `import`, `interview`, `aut
 
 Respond:
 
-```
+```text
 Docs complete.
 - PRD: `<docs_path>/PRD-<slug>.md` ✓
 - ADR: `<docs_path>/ADR-NNN-<slug>.md` ✓   [or: not required]
@@ -101,12 +105,12 @@ If the user asks to skip PRD or ADR creation at any point:
 **Reason:** [their justification]
 ```
 
-4. Generate this PR snippet for them:
+1. Generate this PR snippet for them:
 
-```
+```markdown
 > ⚠️ **upstream skip**: [PRD|ADR] not created for `[branch]`.
 > **Reason:** [their justification]
 > **Logged in:** `docs/upstream/SKIPS.md`
 ```
 
-5. Respond: "Skip logged to `docs/upstream/SKIPS.md`. You can paste the above into your PR description. Development can proceed."
+1. Respond: "Skip logged to `docs/upstream/SKIPS.md`. You can paste the above into your PR description. Development can proceed."

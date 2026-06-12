@@ -1,4 +1,5 @@
 # upstream — Design Spec
+
 **Date:** 2026-06-11
 **Status:** Approved
 
@@ -15,13 +16,15 @@ Teams adopting AI — especially PMs and PDs entering the development workflow �
 Two parts ship together:
 
 **1. CLI (`npx upstream init` / `npx upstream upgrade`)**
+
 - Run once per repo by the platform engineer
 - Scaffolds skills, hook, templates, and config into the repo
 - No global install required — always fetches latest via npx
 - Updates: `npx upstream upgrade` regenerates skills/hook, platform engineer commits diff
 
 **2. Artefacts generated in the org's repo**
-```
+
+```text
 .claude/
 ├── hooks/
 │   └── upstream-check.sh         # UserPromptSubmit hook
@@ -59,9 +62,15 @@ adr_triggers:
   - infrastructure_change
   - auth_change
 docs_path: docs/upstream/
+docs_storage: local   # local | link
 ```
 
 `bypass_for` lists branch prefixes (or label patterns) that never require a PRD — bugs, hotfixes, chores, etc.
+
+`docs_storage` controls where documents live:
+
+- `local` (default): skills create full PRD/ADR markdown files in `docs_path`
+- `link`: skills save a small stub file (`PRD-<slug>.md`) containing only the title, URL, and date — the actual document lives in Notion, Confluence, or any external tool. The hook and git history still record that a PRD existed at the time of the PR.
 
 ---
 
@@ -84,40 +93,48 @@ Runs on every `UserPromptSubmit`. No LLM involved — pure shell logic:
 Entry point skill. Runs in sequence:
 
 **Step 1 — Classification**
+
 - Signals analyzed: user prompt, branch name, recent commit messages
 - Output: `feature` | `bug` | `fix` | `incident` | `chore` | `ambiguous`
 - If `ambiguous` → asks user for explicit confirmation before proceeding
 
 **Step 2 — PRD validation (features only)**
+
 - Searches `docs/upstream/` for existing PRD
 - If found → validates required fields from config; lists missing fields and blocks until complete
-- If not found → presents three paths:
+- If not found → presents four paths:
   - "I have an external document to import"
   - "Guide me through an interactive interview"
   - "Generate an auto-draft from available context"
+  - "I have a link to an external doc (Notion, Confluence, etc.)"
 
 **Step 3 — ADR check**
+
 - Evaluates org-defined `adr_triggers` from config against the PRD content
 - Claude also proactively analyzes PRD for architectural decisions outside the configured triggers
 - If ADR needed → checks existence, invokes `upstream-adr` if missing
 
 **Step 4 — Release**
+
 - Confirms all required docs are present and valid
 - Signals development can proceed
 
 ### Skill: `upstream-prd`
 
-Invoked by `upstream-guard` or directly. Three creation modes:
+Invoked by `upstream-guard` or directly. Four creation modes (selected based on user choice and `docs_storage` config):
 
 - **Import:** user pastes or describes external doc → skill maps content to template fields, fills gaps
 - **Interactive interview:** skill asks one question at a time, builds PRD incrementally
 - **Auto-draft:** skill generates full draft from prompt + branch context + recent commits → user reviews
+- **Link:** user provides a URL to an external document (Notion, Confluence, etc.) → skill saves a stub file with title, URL, and date
 
-Saves to `docs/upstream/PRD-<slug>.md`.
+When `docs_storage: link`, the skill defaults to presenting the **Link** mode first, but all four modes remain available.
+
+Saves to `docs/upstream/PRD-<slug>.md` — either full content (local) or a stub (link).
 
 ### Skill: `upstream-adr`
 
-Same three creation modes as `upstream-prd`. Saves to `docs/upstream/ADR-<number>-<slug>.md`.
+Same four creation modes as `upstream-prd`. Saves to `docs/upstream/ADR-<number>-<slug>.md` — either full content (local) or a stub (link).
 
 ---
 
@@ -136,7 +153,7 @@ This ensures every skip is traceable in git history and visible to tech leads an
 
 ## Happy Path Flow
 
-```
+```text
 Dev: "add OAuth authentication"
          │
          ▼
@@ -171,28 +188,32 @@ Dev: "add OAuth authentication"
 ## Error Handling
 
 | Scenario | Behavior |
-|---|---|
+| --- | --- |
 | `upstream.config.yaml` absent | Hook exits silently — repo not upstream-enabled |
 | PRD incomplete (missing required fields) | Guard lists missing fields, blocks until complete |
 | Dev imports malformed external doc | Guard validates required fields, asks for missing content |
 | Ambiguous branch name (`update-stuff`) | Guard asks explicitly: feature, fix, or other? |
 | Dev requests PRD or ADR skip | Guard requires justification → logs to SKIPS.md → generates PR snippet |
+| `docs_storage: link` and dev provides no URL | Skill asks: "Please share the URL for the existing document." |
 
 ---
 
 ## Testing
 
 ### CLI
+
 - Unit: correct file generation per config variation
 - Integration: run `init` against a temp repo, validate generated structure
 
 ### Hook
+
 - Tested with `bats` or `shunit2`
 - Scenarios: bypass match, PRD found, PRD absent, config absent
 
 ### Skills
+
 - Tested via Claude Code with fixture repos (with/without docs, varied configs)
-- Manual checklist per scenario: new feature, bug, ambiguous, external import, skip flow
+- Manual checklist per scenario: new feature, bug, ambiguous, external import, link mode, skip flow
 
 ---
 

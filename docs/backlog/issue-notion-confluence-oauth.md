@@ -24,6 +24,7 @@ npx upstream auth status        # Show connected integrations
 ### Phase 2 — Link validation
 
 When `docs_storage: link` and a URL is provided:
+
 - Skill detects provider from URL pattern (notion.so, atlassian.net, docs.google.com)
 - Calls a small helper binary (`upstream-fetch`) to validate via the provider's API
 - Pulls real document title, last-edited date
@@ -37,7 +38,7 @@ Skill can create a new page/doc from the PRD/ADR template in the connected tool 
 ## Provider notes
 
 | Provider | Auth | URL pattern | API |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Notion | OAuth2 | `notion.so/*` | Notion API v1 |
 | Confluence Cloud | OAuth2 | `*.atlassian.net/wiki/*` | Confluence REST API v2 |
 | Google Docs | OAuth2 (Drive scope) | `docs.google.com/document/*` | Google Drive API v3 |

@@ -13,7 +13,8 @@
 ## File Map
 
 **New files:**
-```
+
+```text
 src/
   commands/
     auth.js                          # upstream auth <provider> — dispatcher + status
@@ -38,7 +39,8 @@ tests/
 ```
 
 **Modified files:**
-```
+
+```text
 package.json                         # add @modelcontextprotocol/sdk, open; bump version 0.1.0 → 0.2.0
 bin/upstream.js                      # register auth + mcp commands
 src/commands/init.js                 # call writeMcpSettings() after scaffoldInto()
@@ -55,6 +57,7 @@ templates/skills/upstream-adr.md     # same
 ### Task 1: Add Dependencies + Bump Version
 
 **Files:**
+
 - Modify: `package.json`
 
 - [ ] **Step 1: Update package.json**
@@ -102,6 +105,7 @@ npm install
 ```bash
 npm test
 ```
+
 Expected: 16 tests PASS.
 
 - [ ] **Step 4: Commit**
@@ -116,12 +120,14 @@ git commit -m "chore: add @modelcontextprotocol/sdk and open dependencies, bump 
 ### Task 2: Token Storage
 
 **Files:**
+
 - Create: `src/lib/tokens.js`
 - Create: `tests/unit/tokens.test.js`
 
 - [ ] **Step 1: Write the failing tests**
 
 Create `tests/unit/tokens.test.js`:
+
 ```js
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, rmSync, writeFileSync } from 'fs'
@@ -180,6 +186,7 @@ describe('tokens', () => {
 ```bash
 npx vitest run tests/unit/tokens.test.js 2>&1 | head -20
 ```
+
 Expected: FAIL — `tokens.js` not found.
 
 - [ ] **Step 3: Implement `src/lib/tokens.js`**
@@ -223,6 +230,7 @@ export function setProviderToken(provider, tokenData) {
 ```bash
 npx vitest run tests/unit/tokens.test.js
 ```
+
 Expected: 7 tests PASS.
 
 - [ ] **Step 5: Commit**
@@ -237,12 +245,14 @@ git commit -m "feat: add token storage for OAuth provider credentials"
 ### Task 3: Google Docs Provider (URL parsing + Drive API)
 
 **Files:**
+
 - Create: `src/lib/providers/google-docs.js`
 - Create: `tests/unit/google-docs-provider.test.js`
 
 - [ ] **Step 1: Write the failing tests**
 
 Create `tests/unit/google-docs-provider.test.js`:
+
 ```js
 import { describe, it, expect } from 'vitest'
 import { extractDocId } from '../../src/lib/providers/google-docs.js'
@@ -282,6 +292,7 @@ describe('extractDocId', () => {
 ```bash
 npx vitest run tests/unit/google-docs-provider.test.js 2>&1 | head -20
 ```
+
 Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement `src/lib/providers/google-docs.js`**
@@ -367,6 +378,7 @@ export async function refreshTokenIfNeeded(tokenData, clientId, clientSecret) {
 ```bash
 npx vitest run tests/unit/google-docs-provider.test.js
 ```
+
 Expected: 6 tests PASS.
 
 - [ ] **Step 5: Commit**
@@ -381,12 +393,14 @@ git commit -m "feat: add Google Docs provider with URL parsing and Drive API cal
 ### Task 4: validate_link Tool (MCP)
 
 **Files:**
+
 - Create: `src/lib/mcp/tools/validate-link.js`
 - Create: `tests/unit/validate-link.test.js`
 
 - [ ] **Step 1: Write the failing tests**
 
 Create `tests/unit/validate-link.test.js`:
+
 ```js
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -461,6 +475,7 @@ describe('validateLink', () => {
 ```bash
 npx vitest run tests/unit/validate-link.test.js 2>&1 | head -20
 ```
+
 Expected: FAIL — module not found.
 
 - [ ] **Step 3: Implement `src/lib/mcp/tools/validate-link.js`**
@@ -512,6 +527,7 @@ export async function validateLink(url) {
 ```bash
 npx vitest run tests/unit/validate-link.test.js
 ```
+
 Expected: 4 tests PASS.
 
 - [ ] **Step 5: Commit**
@@ -526,6 +542,7 @@ git commit -m "feat: add validate_link MCP tool with Google Docs support"
 ### Task 5: MCP Server
 
 **Files:**
+
 - Create: `src/lib/mcp/server.js`
 
 No unit tests — MCP server is a thin wiring layer. Verified manually in Task 11.
@@ -590,6 +607,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node -e "
 import('./src/lib/mcp/server.js').then(m => m.startMcpServer()).catch(e => { console.error(e); process.exit(1) })
 " 2>&1 | head -5
 ```
+
 Expected: JSON response listing `validate_link` tool (or at minimum no crash/error within 2 seconds).
 
 - [ ] **Step 4: Commit**
@@ -604,6 +622,7 @@ git commit -m "feat: add MCP server with validate_link tool registration"
 ### Task 6: Google Docs Auth Flow
 
 **Files:**
+
 - Create: `src/lib/auth/google-docs.js`
 
 No unit tests — this function opens a browser and starts a localhost server. Verified manually in Task 11.
@@ -727,6 +746,7 @@ git commit -m "feat: add Google Docs OAuth2 auth flow with localhost callback"
 ### Task 7: Auth Command + Wire bin
 
 **Files:**
+
 - Create: `src/commands/auth.js`
 - Create: `tests/integration/auth.test.js`
 - Modify: `bin/upstream.js`
@@ -734,6 +754,7 @@ git commit -m "feat: add Google Docs OAuth2 auth flow with localhost callback"
 - [ ] **Step 1: Write the failing integration test**
 
 Create `tests/integration/auth.test.js`:
+
 ```js
 import { describe, it, expect } from 'vitest'
 import { execSync } from 'child_process'
@@ -780,6 +801,7 @@ describe('upstream auth', () => {
 ```bash
 npx vitest run tests/integration/auth.test.js 2>&1 | head -20
 ```
+
 Expected: FAIL — `auth` command not registered.
 
 - [ ] **Step 3: Create `src/commands/auth.js`**
@@ -885,6 +907,7 @@ program.parse()
 ```bash
 npx vitest run tests/integration/auth.test.js
 ```
+
 Expected: 2 tests PASS.
 
 - [ ] **Step 6: Verify help shows new commands**
@@ -892,6 +915,7 @@ Expected: 2 tests PASS.
 ```bash
 node bin/upstream.js --help
 ```
+
 Expected: `auth` and `mcp` appear in command list.
 
 - [ ] **Step 7: Commit**
@@ -906,6 +930,7 @@ git commit -m "feat: add upstream auth command and mcp subcommand to CLI"
 ### Task 8: Update init + upgrade to Write .claude/settings.json
 
 **Files:**
+
 - Create: `src/lib/settings.js`
 - Create: `tests/integration/init-settings.test.js`
 - Modify: `src/commands/init.js`
@@ -914,6 +939,7 @@ git commit -m "feat: add upstream auth command and mcp subcommand to CLI"
 - [ ] **Step 1: Write the failing test**
 
 Create `tests/integration/init-settings.test.js`:
+
 ```js
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'fs'
@@ -967,6 +993,7 @@ describe('upstream init — .claude/settings.json', () => {
 ```bash
 npx vitest run tests/integration/init-settings.test.js 2>&1 | head -20
 ```
+
 Expected: FAIL — `.claude/settings.json` not created.
 
 - [ ] **Step 3: Create `src/lib/settings.js`**
@@ -1074,6 +1101,7 @@ export async function upgradeCommand() {
 ```bash
 npx vitest run tests/integration/init-settings.test.js
 ```
+
 Expected: 3 tests PASS.
 
 - [ ] **Step 7: Run full test suite**
@@ -1081,6 +1109,7 @@ Expected: 3 tests PASS.
 ```bash
 npm test
 ```
+
 Expected: all tests PASS.
 
 - [ ] **Step 8: Commit**
@@ -1095,6 +1124,7 @@ git commit -m "feat: write .claude/settings.json MCP entry on init and upgrade"
 ### Task 9: Update Config + Templates
 
 **Files:**
+
 - Modify: `src/lib/config.js`
 - Modify: `templates/upstream.config.yaml`
 
@@ -1137,6 +1167,7 @@ export function readConfig(configPath) {
 ```bash
 npx vitest run tests/unit/config.test.js
 ```
+
 Expected: 3 tests PASS (no regressions).
 
 - [ ] **Step 3: Update `templates/upstream.config.yaml`**
@@ -1193,6 +1224,7 @@ docs_storage: local
 ```bash
 npm test
 ```
+
 Expected: all tests PASS.
 
 - [ ] **Step 5: Commit**
@@ -1207,6 +1239,7 @@ git commit -m "feat: add integrations and link_policy to config schema and defau
 ### Task 10: Update Skill Files
 
 **Files:**
+
 - Modify: `templates/skills/upstream-prd.md`
 - Modify: `templates/skills/upstream-adr.md`
 
@@ -1247,6 +1280,7 @@ Save the stub (see Saving). Do not ask further questions after title is resolved
 ```
 
 Also update the **Saving** section to include:
+
 ```markdown
 ## Saving
 
@@ -1295,6 +1329,7 @@ Save the stub (see Saving). Do not ask further questions after title is resolved
 ```
 
 Also ensure the **Saving** section reads:
+
 ```markdown
 ## Saving
 
@@ -1314,6 +1349,7 @@ If invoked from upstream-guard: "Returning to upstream-guard."
 grep -n "validate_link" templates/skills/upstream-prd.md
 grep -n "validate_link" templates/skills/upstream-adr.md
 ```
+
 Expected: `validate_link` appears in both files.
 
 - [ ] **Step 4: Commit**
@@ -1334,6 +1370,7 @@ git commit -m "feat: update link mode in skills to call validate_link and enforc
 ```bash
 npm test
 ```
+
 Expected: all tests PASS (tokens: 7, google-docs-provider: 6, validate-link: 4, cli: 2, config: 3, scaffold: 5, init: 3, upgrade: 3, init-settings: 3, auth: 2 = 38 total).
 
 - [ ] **Step 2: Run hook tests**
@@ -1341,6 +1378,7 @@ Expected: all tests PASS (tokens: 7, google-docs-provider: 6, validate-link: 4, 
 ```bash
 npm run test:hook
 ```
+
 Expected: 6 bats PASS.
 
 - [ ] **Step 3: Smoke test init creates settings.json**
@@ -1352,6 +1390,7 @@ git init -q
 node /Users/joaosmoura/dev/upstream/bin/upstream.js init
 cat .claude/settings.json
 ```
+
 Expected: JSON with `mcpServers.upstream = { command: "npx", args: ["upstream", "mcp"] }`.
 
 - [ ] **Step 4: Smoke test auth status**
@@ -1360,6 +1399,7 @@ Expected: JSON with `mcpServers.upstream = { command: "npx", args: ["upstream", 
 cd "$SMOKE"
 node /Users/joaosmoura/dev/upstream/bin/upstream.js auth status
 ```
+
 Expected: table listing `google-docs`, `confluence`, `notion` — all `✗ not authenticated`.
 
 - [ ] **Step 5: Smoke test auth missing credentials**
@@ -1368,6 +1408,7 @@ Expected: table listing `google-docs`, `confluence`, `notion` — all `✗ not a
 cd "$SMOKE"
 node /Users/joaosmoura/dev/upstream/bin/upstream.js auth google-docs 2>&1 || true
 ```
+
 Expected: error message mentioning `client_id` or `credentials`.
 
 - [ ] **Step 6: Smoke test validate-link unit**
@@ -1383,6 +1424,7 @@ console.assert(r2.error === 'not authenticated', 'should report unauthenticated'
 console.log('validate_link smoke ✓')
 EOF
 ```
+
 Expected: `validate_link smoke ✓`
 
 - [ ] **Step 7: Verify git log**
@@ -1392,6 +1434,7 @@ cd /Users/joaosmoura/dev/upstream
 git log --oneline
 git status
 ```
+
 Expected: clean tree, commits from Tasks 1–10 all present on `main`.
 
 - [ ] **Step 8: Cleanup**
@@ -1405,7 +1448,7 @@ rm -rf "$SMOKE"
 ## Self-Review Against Spec
 
 | Requirement | Task |
-|---|---|
+| --- | --- |
 | `upstream auth google-docs` OAuth2 flow | Task 6 |
 | `upstream auth status` show providers | Task 7 |
 | `upstream mcp` MCP server starts | Task 5 |
@@ -1428,6 +1471,7 @@ rm -rf "$SMOKE"
 **Placeholder scan:** None — all steps contain actual code.
 
 **Type consistency:**
+
 - `getProviderToken(provider)` defined in Task 2, used in Tasks 3, 4, 7
 - `setProviderToken(provider, tokenData)` defined in Task 2, used in Tasks 3, 6
 - `refreshTokenIfNeeded(tokenData, clientId, clientSecret)` defined in Task 3, called in Task 4

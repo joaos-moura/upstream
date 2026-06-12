@@ -1,4 +1,5 @@
 # upstream Integrations Design Spec
+
 **Date:** 2026-06-11
 **Status:** Approved
 
@@ -11,6 +12,7 @@ When `docs_storage: link`, upstream skills accept any URL without validation. Th
 ## Scope
 
 **This spec covers (v1.1):**
+
 - `upstream auth google-docs` — OAuth2 flow for Google Docs
 - `upstream auth status` — show authenticated integrations
 - `upstream mcp` — local MCP server exposing a `validate_link` tool
@@ -19,6 +21,7 @@ When `docs_storage: link`, upstream skills accept any URL without validation. Th
 - Skills updated to call `validate_link` in link mode
 
 **Explicitly out of scope (future):**
+
 - Notion and Confluence providers (same architecture, added later)
 - Document creation (Phase 3) — MCP architecture already supports it
 
@@ -55,7 +58,7 @@ Both sections are commented out by default. Org opts in by uncommenting and comm
 **Policy behaviour:**
 
 | Config | Dev not authenticated | Non-approved provider URL | API offline |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | No policy (default) | Proceeds, asks for title | Proceeds | Proceeds |
 | `require_validation: true` | Blocks: "Run `upstream auth google-docs`" | Blocks if not in allowed list | Blocks with error |
 | `allowed_providers: [google-docs]` | N/A | Blocks: "This org requires Google Docs links" | N/A |
@@ -83,7 +86,7 @@ Both sections are commented out by default. Org opts in by uncommenting and comm
 
 Reads `~/.upstream/tokens.json` and `upstream.config.yaml`, prints per-provider status:
 
-```
+```text
 google-docs  ✓ authenticated (expires 2026-07-11)
 confluence   ✗ not configured
 notion       ✗ not configured
@@ -114,7 +117,7 @@ Starts the MCP server. Called automatically by Claude Code via `.claude/settings
 
 ### Tool: `validate_link`
 
-```
+```text
 Input:  { url: string }
 Output: {
   valid: boolean,
@@ -126,6 +129,7 @@ Output: {
 ```
 
 **Flow:**
+
 1. Detect provider from URL pattern: `docs.google.com/document/d/<id>` → `google-docs`
 2. Unknown pattern → `{ valid: true, title: null, provider: "unknown" }`
 3. Known provider, no token → `{ valid: true, title: null, provider: "google-docs", error: "not authenticated" }`
@@ -141,7 +145,7 @@ Output: {
 
 After user provides a URL, before saving the stub:
 
-```
+```text
 1. Call validate_link tool with the URL.
 2. Read link_policy from upstream.config.yaml.
 
@@ -166,7 +170,8 @@ The stub file (`PRD-link.md` / `ADR-link.md`) is populated with real metadata wh
 ## File Map
 
 **New files:**
-```
+
+```text
 src/
   commands/
     auth.js                        # upstream auth <provider> dispatcher
@@ -183,7 +188,8 @@ src/
 ```
 
 **Modified files:**
-```
+
+```text
 bin/upstream.js                    # register auth + mcp commands
 src/commands/init.js               # merge MCP entry into .claude/settings.json
 src/lib/config.js                  # DEFAULT_CONFIG gets integrations: {}, link_policy: {}
@@ -197,7 +203,7 @@ templates/skills/upstream-adr.md   # same
 ## Error Handling
 
 | Scenario | Behaviour |
-|---|---|
+| --- | --- |
 | `client_id`/`client_secret` missing from config | `upstream auth google-docs` exits with clear instruction to configure them |
 | Browser fails to open | Prints OAuth URL for manual copy-paste |
 | User cancels consent screen | Auth command exits cleanly: "Authentication cancelled." |
@@ -210,21 +216,25 @@ templates/skills/upstream-adr.md   # same
 ## Testing
 
 ### Unit
+
 - `src/lib/providers/google-docs.js`: doc ID extraction from URLs (valid, invalid, edge cases)
 - `src/lib/tokens.js`: read/write/refresh token storage
 - `src/lib/config.js`: `integrations` and `link_policy` merge with defaults
 
 ### Integration
+
 - `upstream auth google-docs` with missing config → clear error message
 - `upstream auth status` with/without tokens
 - `upstream init` on repo with existing `.claude/settings.json` → correct merge
 
 ### MCP tool (manual)
+
 - `validate_link` with valid Google Docs URL → returns real title
 - `validate_link` with unknown URL → graceful unknown response
 - `validate_link` unauthenticated → non-blocking error response
 
 ### Skills (manual, fixture repos)
+
 - Link mode with `require_validation: true` + no auth → blocked
 - Link mode with `allowed_providers` + wrong provider → blocked
 - Link mode authenticated → title auto-populated, no question asked
