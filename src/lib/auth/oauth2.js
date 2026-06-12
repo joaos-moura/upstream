@@ -17,6 +17,9 @@ export async function findFreePort() {
 
 export function waitForCallback(port, expectedState) {
   return new Promise((resolve, reject) => {
+    let settled = false
+    let timer
+
     const srv = http.createServer((req, res) => {
       const u = new URL(req.url, `http://localhost:${port}`)
       const code = u.searchParams.get('code')
@@ -25,6 +28,10 @@ export function waitForCallback(port, expectedState) {
 
       res.writeHead(200, { 'Content-Type': 'text/html' })
       res.end('<html><body><h2>upstream: Authentication complete. You can close this tab.</h2></body></html>')
+
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
       srv.close()
 
       if (error) reject(new Error(`OAuth cancelled: ${error}`))
@@ -35,8 +42,8 @@ export function waitForCallback(port, expectedState) {
 
     srv.listen(port)
     srv.on('error', reject)
-    setTimeout(
-      () => { srv.close(); reject(new Error('Authentication timed out after 5 minutes')) },
+    timer = setTimeout(
+      () => { if (!settled) { settled = true; srv.close(); reject(new Error('Authentication timed out after 5 minutes')) } },
       5 * 60 * 1000
     )
   })
