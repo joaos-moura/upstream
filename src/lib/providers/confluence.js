@@ -3,6 +3,15 @@ import https from 'https'
 import { URL } from 'url'
 import { setProviderToken } from '../tokens.js'
 
+function hostnameMatches(siteUrl, allowedDomain) {
+  try {
+    const h = new URL(siteUrl).hostname.toLowerCase().replace(/\.$/, '')
+    return h === allowedDomain.toLowerCase().replace(/\.$/, '')
+  } catch {
+    return false
+  }
+}
+
 export function extractId(url) {
   if (!url || typeof url !== 'string') return null
   const baseUrl = url.match(/(https?:\/\/[^/]+)/)?.[1] ?? null
@@ -71,16 +80,19 @@ export function getIdentity(accessToken) {
 
 export function validateDomain(identity, config) {
   if (!config.allowed_domain || !identity) return false
-  return identity.sites?.some(s => s.url.includes(config.allowed_domain)) ?? false
+  return identity.sites?.some(s => hostnameMatches(s.url, config.allowed_domain)) ?? false
 }
 
 // Store the matched site's URL in the token so createDocument knows the base URL.
 export function enrichToken(tokenData, identity, config) {
-  const site = identity.sites?.find(s => s.url.includes(config.allowed_domain))
+  const site = identity.sites?.find(s => hostnameMatches(s.url, config.allowed_domain))
   return { ...tokenData, base_url: site?.url ?? null }
 }
 
 export function getMetadata({ id, baseUrl }, accessToken) {
+  if (!baseUrl || !/^https:\/\//i.test(baseUrl)) throw new Error('getMetadata: baseUrl must be an HTTPS URL')
+  if (!/^https:\/\/[^/]+\.atlassian\.net(\/|$)/i.test(baseUrl)) throw new Error('getMetadata: baseUrl must be an atlassian.net host')
+  if (!/^\d+$/.test(String(id))) throw new Error('getMetadata: id must be numeric')
   const host = new URL(baseUrl).hostname
   return new Promise((resolve, reject) => {
     const req = https.get({
