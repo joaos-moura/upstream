@@ -1,10 +1,10 @@
-import { extractDocId, getFileMetadata, refreshTokenIfNeeded } from '../../providers/google-docs.js'
+import { extractId, getMetadata, refreshTokenIfNeeded } from '../../providers/google-docs.js'
 import { getProviderToken } from '../../tokens.js'
 import { readConfig } from '../../config.js'
 import { join } from 'path'
 
 async function validateGoogleDocsLink(url) {
-  const docId = extractDocId(url)
+  const docId = extractId(url)
   if (!docId) {
     return { valid: false, title: null, provider: 'google-docs', last_edited: null, error: 'Invalid Google Docs URL' }
   }
@@ -20,8 +20,8 @@ async function validateGoogleDocsLink(url) {
     if (!client_id || !client_secret) {
       return { valid: true, title: null, provider: 'google-docs', last_edited: null, error: 'google_docs credentials not configured' }
     }
-    const token = await refreshTokenIfNeeded(tokenData, client_id, client_secret)
-    const metadata = await getFileMetadata(docId, token.access_token)
+    const token = await refreshTokenIfNeeded(tokenData, { client_id, client_secret })
+    const metadata = await getMetadata(docId, token.access_token)
     return {
       valid: true,
       title: metadata.name,
