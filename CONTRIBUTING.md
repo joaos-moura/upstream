@@ -32,22 +32,26 @@ bin/
   upstream.js               # CLI entry point (Commander.js)
 src/
   commands/
-    init.js                 # upstream init
+    init.js                 # upstream init — wizard + scaffold orchestration
     upgrade.js              # upstream upgrade
     auth.js                 # upstream auth <provider>
   lib/
     config.js               # read upstream.config.yaml
-    scaffold.js             # copy templates into target repo
+    wizard.js               # interactive two-phase init wizard (@inquirer/prompts)
+    scaffold.js             # scaffold files into target repo, generateConfig, writeCodeowners
     settings.js             # write .claude/settings.json MCP entry
     tokens.js               # read/write ~/.upstream/tokens.json
     auth/
-      google-docs.js        # OAuth2 flow (browser → localhost callback → token exchange)
+      oauth2.js             # OAuth2 + PKCE flow (generatePKCE, browser → localhost → token exchange)
     providers/
-      google-docs.js        # Drive API: extractDocId, getFileMetadata, refreshTokenIfNeeded
+      registry.js           # PROVIDERS map — all provider definitions
+      google-docs.js        # Drive API: extractId, exchangeCode (PKCE), getMetadata, refresh
+      confluence.js         # Confluence API: extractId, exchangeCode (PKCE), getMetadata, refresh
     mcp/
       server.js             # MCP server entry (stdio transport)
       tools/
         validate-link.js    # validate_link tool: detect provider, call API, return metadata
+        create-document.js  # create_document tool: create doc in provider, return URL
 templates/
   hooks/
     upstream-check.sh       # UserPromptSubmit hook (bash)
@@ -70,9 +74,10 @@ tests/
 **Key design decisions:**
 
 - **ESM throughout** — the package uses `"type": "module"`. All imports use ESM syntax (`import`/`export`). No CommonJS.
-- **Zero runtime dependencies on the host** — skills and hooks work with whatever Claude Code provides. The MCP server (`upstream mcp`) is the only process that needs npm packages at runtime.
-- **Config is committed, tokens are not** — `upstream.config.yaml` and OAuth `client_id`/`client_secret` belong in the repo (set by platform engineers). `~/.upstream/tokens.json` is per-developer and never committed.
+- **PKCE, no client_secret** — all OAuth flows use PKCE (RFC 7636). `upstream.config.yaml` only needs `client_id` and `allowed_domain` — no `client_secret` is stored or committed. The PKCE verifier is generated at runtime per-flow.
+- **Config is committed, tokens are not** — `upstream.config.yaml` belongs in the repo (set by platform engineers). `~/.upstream/tokens.json` is per-developer and never committed.
 - **Skills are markdown** — `upstream-guard.md`, `upstream-prd.md`, `upstream-adr.md` are instruction files for Claude Code, not code. Changes to them change Claude's behavior.
+- **Wizard generates config** — `upstream init` runs an interactive wizard that writes `upstream.config.yaml` from answers rather than copying a static template. Non-interactive mode via `--from file.json` or `--yes`.
 
 ---
 
@@ -81,7 +86,7 @@ tests/
 ```bash
 # From the repo root
 node bin/upstream.js --help
-node bin/upstream.js init
+node bin/upstream.js init --yes
 node bin/upstream.js auth status
 ```
 
@@ -89,19 +94,33 @@ node bin/upstream.js auth status
 
 ## Adding a new provider
 
-upstream currently supports Google Docs. To add Notion or Confluence:
+upstream currently supports Google Docs and Confluence. To add a new provider:
 
-1. **Create `src/lib/providers/<name>.js`** — implement `extractDocId(url)` and `getFileMetadata(docId, accessToken)` following the Google Docs provider as a model.
+1. **Create `src/lib/providers/<name>.js`** — implement the following exports:
+   - `extractId(url)` — extract the document ID from a URL, return `null` if not matched
+   - `exchangeCode(code, clientId, redirectUri, codeVerifier)` — exchange OAuth code for tokens using PKCE (no `clientSecret` param)
+   - `getIdentity(accessToken, tokenResponse)` — return identity object used by `validateDomain`
+   - `validateDomain(identity, config)` — return `true` if identity belongs to the configured org
+   - `getMetadata(docId, accessToken)` — return `{ title, last_edited }` from the provider API
+   - `createDocument(title, content, destination, tokenData)` — create a document, return `{ url }`
+   - Optionally: `refreshTokenIfNeeded(tokenData, appConfig)`, `enrichToken(tokenData, identity, config)`
 
-2. **Create `src/lib/auth/<name>.js`** — implement the OAuth flow. Copy the structure of `google-docs.js`: find a free port, open the browser, wait for callback, exchange code, call `setProviderToken`.
+2. **Register in `src/lib/providers/registry.js`** — add a `PROVIDERS` entry with:
+   - `configKey` — key under `integrations` in `upstream.config.yaml`
+   - `urlPattern` — regex to match provider URLs
+   - `domainField` — config key for org domain validation (e.g. `allowed_domain`)
+   - `authUrl` — OAuth authorization endpoint
+   - `scopes` — required OAuth scopes
+   - `authParams` — extra query params for the auth URL
+   - `supportsRefresh` — whether the provider issues refresh tokens
 
-3. **Update `src/lib/mcp/tools/validate-link.js`** — add a URL detection check and call your new provider.
+3. **Update `templates/upstream.config.yaml`** — add a commented example for the new provider's credentials.
 
-4. **Update `src/commands/auth.js`** — add the provider to `KNOWN_PROVIDERS` and add a dispatch case in `authCommand`.
+4. **Write tests** — unit tests for `extractId`, `validateDomain` (pure functions, no network). Integration test for the auth command error path (missing credentials).
 
-5. **Update `templates/upstream.config.yaml`** — add a commented example for the new provider's credentials.
+5. **Update wizard if needed** — if the provider needs special config fields beyond `client_id` + `allowed_domain`, update `src/lib/wizard.js` to collect them in Phase 1.
 
-6. **Write tests** — unit tests for URL parsing (no network), integration test for the auth command error path (missing credentials).
+**Note on PKCE:** All providers in upstream use PKCE. When implementing `exchangeCode`, include `code_verifier` in the token request body and omit `client_secret`. If a provider does not support PKCE, it cannot be added until support is added — open an issue instead.
 
 ---
 
@@ -111,7 +130,8 @@ The files in `templates/skills/` are instruction documents that Claude Code read
 
 - Keep the YAML frontmatter (`name`, `description`) — Claude Code uses it for skill registration.
 - Be precise about conditions and fallbacks. Vague instructions produce inconsistent behavior.
-- Test by running `upstream init` into a scratch repo and exercising the skill manually in Claude Code.
+- Reference `<docs_path>` (read from `upstream.config.yaml`) rather than hardcoding `docs/upstream/`.
+- Test by running `upstream init --yes` into a scratch repo and exercising the skill manually in Claude Code.
 
 ---
 
@@ -126,8 +146,8 @@ The files in `templates/skills/` are instruction documents that Claude Code read
 
 ## Test conventions
 
-- **Unit tests** (`tests/unit/`) — mock external I/O (network, filesystem via `UPSTREAM_TOKENS_PATH` env). Use `vitest` mocks for modules.
-- **Integration tests** (`tests/integration/`) — run the CLI as a child process with `execSync`. Use real temp directories under `/tmp/`, cleaned up in `afterEach`.
+- **Unit tests** (`tests/unit/`) — test pure functions directly. Mock external I/O (network, filesystem via `UPSTREAM_TOKENS_PATH` env). Use `vitest` mocks for modules.
+- **Integration tests** (`tests/integration/`) — run the CLI as a child process with `execSync`. Pass `--yes` or `--from answers.json` to `upstream init` so tests are non-interactive. Use real temp directories under `/tmp/`, cleaned up in `afterEach`.
 - **Hook tests** (`tests/hook/`) — bats scripts that exercise `upstream-check.sh` directly with mock git state.
 
 New tests go in the right category. Integration tests are slower but catch wiring bugs that unit tests miss — prefer them for command-level behavior.

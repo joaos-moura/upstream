@@ -4,7 +4,7 @@
 
 **upstream** installs a hook into Claude Code that detects feature work and blocks it until a Product Requirements Document (PRD) exists. If the feature introduces architectural decisions — a new external dependency, a database migration, an API contract change — it also requires an Architecture Decision Record (ADR).
 
-This keeps your team's reasoning in the repository, not scattered across Notion pages and memory.
+This keeps your team's reasoning in the repository, not scattered across memory.
 
 ---
 
@@ -19,11 +19,11 @@ UPSTREAM: feature detected without PRD. Invoke upstream-guard before continuing.
 Claude then runs the `upstream-guard` skill, which:
 
 1. **Classifies the work** — feature, bug, fix, chore, or incident
-2. **Checks for a PRD** — by filename or content match in `docs/upstream/`
+2. **Checks for a PRD** — by filename or content match in `<docs_path>/`
 3. **Checks for an ADR** — if the PRD describes architectural decisions
 4. **Releases to development** once docs are in place
 
-PRDs and ADRs can be created in four ways: imported from an existing document, generated through a short interview, auto-drafted from git context, or linked to an external tool (Notion, Confluence, Google Docs).
+PRDs and ADRs can be created in four ways: imported from an existing document, generated through a short interview, auto-drafted from git context, or linked to an external tool (Confluence, Google Docs).
 
 Bypass branches (`fix/`, `hotfix/`, `chore/`, `docs/`) are skipped automatically.
 
@@ -35,13 +35,15 @@ Bypass branches (`fix/`, `hotfix/`, `chore/`, `docs/`) are skipped automatically
 # Install globally
 npm install -g upstream
 
-# In your repo
+# In your repo (platform engineer runs this once)
 cd my-project
 upstream init
-git add .claude/ docs/ upstream.config.yaml
+git add .
 git commit -m "feat: add upstream Claude Code plugin"
 git push
 ```
+
+`upstream init` runs an interactive wizard that configures `upstream.config.yaml`, scaffolds `.claude/`, and optionally sets up a CODEOWNERS guardian.
 
 Your team gets the plugin on their next `git pull`. No global install required on their machines — Claude Code picks up `.claude/` automatically.
 
@@ -51,11 +53,26 @@ Your team gets the plugin on their next `git pull`. No global install required o
 
 | Command | Description |
 |---|---|
-| `upstream init` | Scaffold upstream into the current repo |
+| `upstream init` | Interactive wizard: scaffold upstream into the current repo |
+| `upstream init --yes` | Non-interactive: scaffold with all defaults |
+| `upstream init --from answers.json` | Non-interactive: load all answers from a JSON file |
 | `upstream upgrade` | Regenerate skills and hook, preserve config and docs |
-| `upstream auth google-docs` | Connect Google Docs via OAuth2 |
+| `upstream auth google-docs` | Connect Google Docs via OAuth (PKCE) |
+| `upstream auth confluence` | Connect Confluence via OAuth (PKCE) |
 | `upstream auth status` | Show authentication status for all providers |
 | `upstream mcp` | Start the upstream MCP server (called automatically by Claude Code) |
+
+### `upstream init` flags
+
+| Flag | Description |
+|---|---|
+| `--from <file>` | Load answers from a JSON file (non-interactive, for CI/scripts) |
+| `--docs-storage <value>` | `local` or `link` |
+| `--provider <id>` | `google-docs` or `confluence` |
+| `--client-id <id>` | OAuth client_id for the provider |
+| `--allowed-domain <domain>` | Allowed domain (e.g. `acme.com`) |
+| `--guardian <handle>` | GitHub handle or email written to `.github/CODEOWNERS` |
+| `--yes` | Skip interactive Phase 2 (use org defaults) |
 
 ---
 
@@ -97,7 +114,7 @@ docs_storage: local
 
 ---
 
-## Link mode — external docs (Notion, Confluence, Google Docs)
+## Link mode — external docs (Confluence, Google Docs)
 
 If your team stores PRDs and ADRs in an external tool, set `docs_storage: link`. upstream saves a small stub file with the document URL and metadata instead of full content:
 
@@ -110,23 +127,25 @@ If your team stores PRDs and ADRs in an external tool, set `docs_storage: link`.
 - **Date:** 2026-06-12
 ```
 
-### Google Docs integration
+### OAuth and PKCE
 
-upstream can validate Google Docs links and pull the document title automatically, so developers don't need to type it.
+upstream uses **PKCE** (Proof Key for Code Exchange, RFC 7636) for all OAuth flows. This means **no `client_secret` is needed** in `upstream.config.yaml` — only `client_id` and `allowed_domain`. The secret used during token exchange is generated at runtime per-flow and never stored.
+
+### Google Docs integration
 
 **Setup (platform engineer, done once per org):**
 
 1. Create a project at [console.cloud.google.com](https://console.cloud.google.com/apis/credentials)
 2. Enable the **Google Drive API**
-3. Create an **OAuth 2.0 Client ID** → type: Desktop app
-4. Add `http://localhost` as an authorized redirect URI
-5. Add credentials to `upstream.config.yaml` and commit:
+3. Create an **OAuth 2.0 Client ID** → type: **Desktop app**
+   - Desktop app type allows localhost automatically — no redirect URI configuration needed
+4. Add credentials to `upstream.config.yaml` and commit:
 
 ```yaml
 integrations:
   google_docs:
     client_id: "xxx.apps.googleusercontent.com"
-    client_secret: "GOCSPX-..."
+    allowed_domain: "yourcompany.com"
 ```
 
 **Each developer authenticates once:**
@@ -135,7 +154,27 @@ integrations:
 upstream auth google-docs
 ```
 
-This opens a browser, completes the OAuth flow, and stores tokens in `~/.upstream/tokens.json` (never committed).
+### Confluence integration
+
+**Setup (platform engineer, done once per org):**
+
+1. Create an app at [developer.atlassian.com/console/myapps](https://developer.atlassian.com/console/myapps/)
+2. Enable **OAuth 2.0 (3LO)**
+3. Add scopes: `read:confluence-content.all`, `write:confluence-content`, `offline_access`
+4. Add credentials to `upstream.config.yaml` and commit:
+
+```yaml
+integrations:
+  confluence:
+    client_id: "yyy"
+    allowed_domain: "yourcompany.atlassian.net"
+```
+
+**Each developer authenticates once:**
+
+```bash
+upstream auth confluence
+```
 
 ### Enforcement policy
 
@@ -148,16 +187,22 @@ link_policy:
   require_validation: true  # block unvalidated links (e.g. unauthenticated)
 ```
 
+### CODEOWNERS guardian
+
+During `upstream init`, you can designate a GitHub handle or email as the guardian for `upstream.config.yaml`. upstream writes a `.github/CODEOWNERS` entry — any PR that modifies the config requires guardian approval.
+
+> **Note:** CODEOWNERS is only enforced when branch protection is enabled on the repository.
+
 ---
 
 ## Skipping
 
-If a PRD or ADR genuinely isn't needed, developers can skip with a justification. The skip is logged to `docs/upstream/SKIPS.md` and a PR snippet is generated for transparency:
+If a PRD or ADR genuinely isn't needed, developers can skip with a justification. The skip is logged to `<docs_path>/SKIPS.md` and a PR snippet is generated for transparency:
 
 ```
 > ⚠️ upstream skip: PRD not created for `feat/quick-fix`.
 > Reason: two-line CSS change, no product decisions involved.
-> Logged in: docs/upstream/SKIPS.md
+> Logged in: <docs_path>/SKIPS.md
 ```
 
 ---
@@ -180,7 +225,9 @@ If a PRD or ADR genuinely isn't needed, developers can skip with a justification
       ADR-link.md               # stub template for link mode
   settings.json                 # MCP server registration (upstream mcp)
 upstream.config.yaml            # org configuration
-docs/upstream/                  # your PRDs, ADRs, and skip log
+.github/
+  CODEOWNERS                    # guardian entry (if configured)
+<docs_path>/                    # your PRDs, ADRs, and skip log
 ```
 
 ---
