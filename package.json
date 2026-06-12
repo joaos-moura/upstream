@@ -6,13 +6,18 @@
   "bin": {
     "upstream": "./bin/upstream.js"
   },
-  "files": ["bin", "src", "templates"],
+  "files": [
+    "bin",
+    "src",
+    "templates"
+  ],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
     "test:hook": "npx bats tests/hook/"
   },
   "dependencies": {
+    "@inquirer/prompts": "^8.5.2",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
