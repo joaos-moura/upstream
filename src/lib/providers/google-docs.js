@@ -96,7 +96,7 @@ export async function getMetadata(docId, accessToken) {
 }
 
 export async function refreshTokenIfNeeded(tokenData, appConfig) {
-  if (tokenData.expiry - Date.now() > 5 * 60 * 1000) return tokenData
+  if (tokenData.expiry && tokenData.expiry - Date.now() > 5 * 60 * 1000) return tokenData
 
   const body = new URLSearchParams({
     refresh_token: tokenData.refresh_token,

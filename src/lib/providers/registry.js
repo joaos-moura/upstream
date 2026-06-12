@@ -49,7 +49,7 @@ export const PROVIDERS = {
   },
   'notion': {
     configKey: 'notion',
-    urlPattern: /notion\.so\//,
+    urlPattern: /(?:^|[./])notion\.so\//,
     supportsRefresh: false,
     domainField: 'allowed_workspace',
     authUrl: 'https://api.notion.com/v1/oauth/authorize',

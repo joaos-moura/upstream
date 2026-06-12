@@ -24,7 +24,7 @@ const TOOLS = [
       properties: {
         provider: { type: 'string', description: 'Provider name: notion, confluence, or google-docs' },
         title: { type: 'string', description: 'Document title' },
-        content: { type: 'string', description: 'Initial document content (HTML for Google Docs/Confluence, plain text for Notion)' },
+        content: { type: 'string', description: 'Initial document content. Google Docs: HTML. Confluence: storage format (XHTML-based). Notion: plain text.' },
         destination: {
           type: 'string',
           description: 'Parent location. Notion: parent page ID. Confluence: "SPACE_KEY" or "SPACE_KEY:parent_page_id". Google Docs: parent folder ID (optional).',
