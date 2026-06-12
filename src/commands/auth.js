@@ -19,14 +19,13 @@ export async function authCommand(provider) {
   const config = readConfig(join(process.cwd(), 'upstream.config.yaml'))
   const appConfig = config.integrations?.[providerDef.configKey] ?? {}
 
-  if (!appConfig.client_id || !appConfig.client_secret) {
+  if (!appConfig.client_id) {
     console.error(chalk.red(`upstream auth: ${provider} credentials not configured.`))
     console.error('')
     console.error('Add to upstream.config.yaml:')
     console.error('  integrations:')
     console.error(`    ${providerDef.configKey}:`)
     console.error('      client_id: "..."')
-    console.error('      client_secret: "..."')
     console.error(`      ${providerDef.domainField}: "..."`)
     process.exit(1)
   }
