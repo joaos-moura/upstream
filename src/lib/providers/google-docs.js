@@ -81,8 +81,9 @@ export async function getMetadata(docId, accessToken) {
       res.on('end', () => {
         let parsed
         try { parsed = JSON.parse(data) } catch { parsed = null }
-        if (res.statusCode === 200 && parsed) resolve(parsed)
-        else {
+        if (res.statusCode === 200 && parsed) {
+          resolve({ title: parsed.name ?? null, last_edited: parsed.modifiedTime ?? null })
+        } else {
           const msg = parsed?.error?.message || `Drive API error ${res.statusCode}`
           const err = new Error(msg)
           err.status = res.statusCode
