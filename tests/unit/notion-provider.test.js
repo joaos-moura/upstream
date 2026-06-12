@@ -27,6 +27,15 @@ describe('extractId', () => {
   it('returns null for non-Notion URL', () => {
     expect(extractId('https://docs.google.com/document/d/abc')).toBeNull()
   })
+
+  it('strips # fragment before extracting ID', () => {
+    expect(extractId('https://www.notion.so/My-Page-abc123def456abc123def456abc12345#some-block'))
+      .toBe('abc123def456abc123def456abc12345')
+  })
+
+  it('returns null for null input', () => {
+    expect(extractId(null)).toBeNull()
+  })
 })
 
 describe('validateDomain', () => {

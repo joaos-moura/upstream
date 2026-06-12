@@ -2,7 +2,8 @@
 import https from 'https'
 
 export function extractId(url) {
-  const segment = url.split('/').pop()?.split('?')[0]
+  if (!url || typeof url !== 'string') return null
+  const segment = url.split('/').pop()?.split('?')[0].split('#')[0]
   if (!segment) return null
   const clean = segment.replace(/-/g, '')
   const match = clean.match(/([a-f0-9]{32})$/i)
@@ -47,7 +48,7 @@ export async function getIdentity(_accessToken, tokenResponse) {
 }
 
 export function validateDomain(identity, config) {
-  if (!config.allowed_workspace) return false
+  if (!config.allowed_workspace || !identity) return false
   return (
     identity.workspace_name === config.allowed_workspace ||
     identity.workspace_id === config.allowed_workspace
@@ -89,6 +90,7 @@ export async function getMetadata(pageId, accessToken) {
 }
 
 export async function createDocument(title, content, destination, tokenData) {
+  if (!destination) throw new Error('Notion createDocument requires a destination page ID')
   const body = JSON.stringify({
     parent: { type: 'page_id', page_id: destination },
     properties: {
@@ -116,8 +118,8 @@ export async function createDocument(title, content, destination, tokenData) {
       res.on('end', () => {
         let parsed
         try { parsed = JSON.parse(data) } catch { parsed = null }
-        if (res.statusCode === 200 && parsed?.url) {
-          resolve({ url: parsed.url })
+        if (res.statusCode === 200 && parsed) {
+          resolve({ url: parsed.url ?? null })
         } else {
           const msg = parsed?.message || `Notion API error ${res.statusCode}`
           reject(new Error(msg))
