@@ -12,6 +12,10 @@ function hostnameMatches(siteUrl, allowedDomain) {
   }
 }
 
+function findMatchingSite(identity, config) {
+  return identity?.sites?.find(s => hostnameMatches(s.url, config.allowed_domain)) ?? null
+}
+
 export function extractId(url) {
   if (!url || typeof url !== 'string') return null
   const baseUrl = url.match(/(https?:\/\/[^/]+)/)?.[1] ?? null
@@ -81,12 +85,12 @@ export function getIdentity(accessToken) {
 
 export function validateDomain(identity, config) {
   if (!config.allowed_domain || !identity) return false
-  return identity.sites?.some(s => hostnameMatches(s.url, config.allowed_domain)) ?? false
+  return findMatchingSite(identity, config) !== null
 }
 
 // Store the matched site's URL in the token so createDocument knows the base URL.
 export function enrichToken(tokenData, identity, config) {
-  const site = identity?.sites?.find(s => hostnameMatches(s.url, config.allowed_domain))
+  const site = findMatchingSite(identity, config)
   return { ...tokenData, base_url: site?.url ?? null }
 }
 

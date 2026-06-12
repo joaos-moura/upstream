@@ -11,10 +11,10 @@ export async function createDocument({ provider, title, content, destination }) 
   const tokenData = getProviderToken(provider)
   if (!tokenData) throw new Error(`Not authenticated with ${provider}. Run: upstream auth ${provider}`)
 
-  try {
-    const config = readConfig(join(process.cwd(), 'upstream.config.yaml'))
-    const appConfig = config.integrations?.[def.configKey] ?? {}
+  const config = readConfig(join(process.cwd(), 'upstream.config.yaml'))
+  const appConfig = config.integrations?.[def.configKey] ?? {}
 
+  try {
     const freshToken = def.supportsRefresh && def.refreshTokenIfNeeded
       ? await def.refreshTokenIfNeeded(tokenData, appConfig)
       : tokenData

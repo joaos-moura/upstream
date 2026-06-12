@@ -21,6 +21,7 @@ export function exchangeCode(code, clientId, clientSecret, redirectUri) {
       method: 'POST',
       headers: {
         Authorization: `Basic ${auth}`,
+        'Notion-Version': '2022-06-28',
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
       },

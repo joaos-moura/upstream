@@ -56,6 +56,7 @@ export async function startMcpServer() {
       if (typeof args?.provider !== 'string') throw new Error('create_document requires a string provider argument')
       if (typeof args?.title !== 'string') throw new Error('create_document requires a string title argument')
       if (typeof args?.destination !== 'string') throw new Error('create_document requires a string destination argument')
+      if (!args.destination) throw new Error('create_document requires a non-empty destination argument')
       const result = await createDocument({
         provider: args.provider,
         title: args.title,
