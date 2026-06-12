@@ -1,31 +1,50 @@
+// tests/unit/google-docs-provider.test.js
 import { describe, it, expect } from 'vitest'
-import { extractDocId } from '../../src/lib/providers/google-docs.js'
+import { extractId, validateDomain } from '../../src/lib/providers/google-docs.js'
 
-describe('extractDocId', () => {
+describe('extractId', () => {
   it('extracts ID from standard Google Docs URL', () => {
     const url = 'https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms/edit'
-    expect(extractDocId(url)).toBe('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms')
+    expect(extractId(url)).toBe('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms')
   })
 
   it('extracts ID from URL without trailing path', () => {
     const url = 'https://docs.google.com/document/d/abc123def456'
-    expect(extractDocId(url)).toBe('abc123def456')
+    expect(extractId(url)).toBe('abc123def456')
   })
 
   it('extracts ID with underscores and hyphens', () => {
     const url = 'https://docs.google.com/document/d/1a-b_C2/edit?usp=sharing'
-    expect(extractDocId(url)).toBe('1a-b_C2')
+    expect(extractId(url)).toBe('1a-b_C2')
   })
 
   it('returns null for non-Google Docs URL', () => {
-    expect(extractDocId('https://notion.so/some-page')).toBeNull()
+    expect(extractId('https://notion.so/some-page')).toBeNull()
   })
 
   it('returns null for malformed URL', () => {
-    expect(extractDocId('not a url')).toBeNull()
+    expect(extractId('not a url')).toBeNull()
   })
 
   it('returns null for Google Docs URL without document ID', () => {
-    expect(extractDocId('https://docs.google.com/document/')).toBeNull()
+    expect(extractId('https://docs.google.com/document/')).toBeNull()
+  })
+})
+
+describe('validateDomain', () => {
+  it('returns true when email matches allowed_domain', () => {
+    expect(validateDomain({ email: 'dev@acme.com' }, { allowed_domain: 'acme.com' })).toBe(true)
+  })
+
+  it('returns false when email does not match allowed_domain', () => {
+    expect(validateDomain({ email: 'dev@other.com' }, { allowed_domain: 'acme.com' })).toBe(false)
+  })
+
+  it('returns false when allowed_domain is not configured', () => {
+    expect(validateDomain({ email: 'dev@acme.com' }, {})).toBe(false)
+  })
+
+  it('returns false when email is missing', () => {
+    expect(validateDomain({}, { allowed_domain: 'acme.com' })).toBe(false)
   })
 })
