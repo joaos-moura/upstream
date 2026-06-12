@@ -1,42 +1,31 @@
-import { extractId, getMetadata, refreshTokenIfNeeded } from '../../providers/google-docs.js'
+// src/lib/mcp/tools/validate-link.js
+import { PROVIDERS } from '../../providers/registry.js'
 import { getProviderToken } from '../../tokens.js'
 import { readConfig } from '../../config.js'
 import { join } from 'path'
 
-async function validateGoogleDocsLink(url) {
-  const docId = extractId(url)
-  if (!docId) {
-    return { valid: false, title: null, provider: 'google-docs', last_edited: null, error: 'Invalid Google Docs URL' }
-  }
+export async function validateLink(url) {
+  const entry = Object.entries(PROVIDERS).find(([, def]) => def.urlPattern.test(url))
+  if (!entry) return { valid: true, provider: 'unknown', title: null, last_edited: null, error: null }
 
-  const tokenData = getProviderToken('google-docs')
-  if (!tokenData) {
-    return { valid: true, title: null, provider: 'google-docs', last_edited: null, error: 'not authenticated' }
-  }
+  const [providerId, def] = entry
+  const tokenData = getProviderToken(providerId)
+  if (!tokenData) return { valid: true, provider: providerId, title: null, last_edited: null, error: 'not authenticated' }
 
   try {
     const config = readConfig(join(process.cwd(), 'upstream.config.yaml'))
-    const { client_id, client_secret } = config.integrations?.google_docs ?? {}
-    if (!client_id || !client_secret) {
-      return { valid: true, title: null, provider: 'google-docs', last_edited: null, error: 'google_docs credentials not configured' }
-    }
-    const token = await refreshTokenIfNeeded(tokenData, { client_id, client_secret })
-    const metadata = await getMetadata(docId, token.access_token)
-    return {
-      valid: true,
-      title: metadata.name,
-      provider: 'google-docs',
-      last_edited: metadata.modifiedTime ?? null,
-      error: null,
-    }
-  } catch (err) {
-    return { valid: false, title: null, provider: 'google-docs', last_edited: null, error: err.message }
-  }
-}
+    const appConfig = config.integrations?.[def.configKey] ?? {}
 
-export async function validateLink(url) {
-  if (/docs\.google\.com\/document\/d\//.test(url)) {
-    return validateGoogleDocsLink(url)
+    const freshToken = def.supportsRefresh && def.refreshTokenIfNeeded
+      ? await def.refreshTokenIfNeeded(tokenData, appConfig)
+      : tokenData
+
+    const idResult = def.extractId(url)
+    if (!idResult) return { valid: false, provider: providerId, title: null, last_edited: null, error: 'Invalid URL format' }
+
+    const metadata = await def.getMetadata(idResult, freshToken.access_token)
+    return { valid: true, provider: providerId, title: metadata.title, last_edited: metadata.last_edited, error: null }
+  } catch (err) {
+    return { valid: false, provider: providerId, title: null, last_edited: null, error: err.message }
   }
-  return { valid: true, title: null, provider: 'unknown', last_edited: null, error: null }
 }
