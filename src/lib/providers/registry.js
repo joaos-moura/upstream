@@ -15,6 +15,16 @@ import {
   validateDomain as notionValidateDomain,
   createDocument as notionCreateDocument,
 } from './notion.js'
+import {
+  extractId as confluenceExtractId,
+  exchangeCode as confluenceExchangeCode,
+  getIdentity as confluenceGetIdentity,
+  getMetadata as confluenceGetMetadata,
+  validateDomain as confluenceValidateDomain,
+  enrichToken as confluenceEnrichToken,
+  refreshTokenIfNeeded as confluenceRefreshTokenIfNeeded,
+  createDocument as confluenceCreateDocument,
+} from './confluence.js'
 
 export const PROVIDERS = {
   'google-docs': {
@@ -53,5 +63,22 @@ export const PROVIDERS = {
     validateDomain: notionValidateDomain,
     refreshTokenIfNeeded: null,
     createDocument: notionCreateDocument,
+  },
+  'confluence': {
+    configKey: 'confluence',
+    urlPattern: /\.atlassian\.net\/wiki\//,
+    supportsRefresh: true,
+    domainField: 'allowed_domain',
+    authUrl: 'https://auth.atlassian.com/authorize',
+    scopes: ['read:confluence-content.all', 'write:confluence-content', 'offline_access'],
+    authParams: { audience: 'api.atlassian.com', prompt: 'consent' },
+    enrichToken: confluenceEnrichToken,
+    extractId: confluenceExtractId,
+    exchangeCode: confluenceExchangeCode,
+    getIdentity: confluenceGetIdentity,
+    getMetadata: confluenceGetMetadata,
+    validateDomain: confluenceValidateDomain,
+    refreshTokenIfNeeded: confluenceRefreshTokenIfNeeded,
+    createDocument: confluenceCreateDocument,
   },
 }
