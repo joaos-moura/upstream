@@ -27,3 +27,18 @@ docs_path: docs/upstream/
 # 'local': full PRD/ADR content stored in this repo
 # 'link': stub file with URL + metadata; actual doc lives in Notion/Confluence/etc.
 docs_storage: local
+
+# Integrations — OAuth credentials per provider (set by platform engineer, commit to repo)
+# integrations:
+#   google_docs:
+#     client_id: "xxx.apps.googleusercontent.com"
+#     client_secret: "GOCSPX-..."
+#     # Create credentials at: https://console.cloud.google.com/apis/credentials
+#     # Enable: Google Drive API → OAuth 2.0 Client ID → Desktop app
+#     # Add authorized redirect URI: http://localhost (any port)
+
+# Link enforcement policy (optional — both fields are opt-in)
+# link_policy:
+#   allowed_providers:        # if set, only these provider URLs accepted in link mode
+#     - google-docs
+#   require_validation: true  # if true, unvalidated links block progress (no silent fallback)

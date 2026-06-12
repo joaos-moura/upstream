@@ -14,6 +14,8 @@ export const DEFAULT_CONFIG = {
   ],
   docs_path: 'docs/upstream/',
   docs_storage: 'local',
+  integrations: {},
+  link_policy: {},
 }
 
 export function readConfig(configPath) {
