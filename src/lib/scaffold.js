@@ -1,5 +1,7 @@
-import { copyFile, mkdir, writeFile, access, chmod } from 'fs/promises'
+import { copyFile, mkdir, writeFile, appendFile, access, chmod } from 'fs/promises'
+import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
+import yaml from 'js-yaml'
 
 const HOOK_SRC = 'hooks/upstream-check.sh'
 
@@ -18,7 +20,43 @@ async function fileExists(p) {
   try { await access(p); return true } catch { return false }
 }
 
-export async function scaffoldInto(targetDir, templatesDir) {
+const PROVIDER_CONFIG_KEY = { 'google-docs': 'google_docs', 'confluence': 'confluence' }
+
+export function generateConfig(answers) {
+  const config = {
+    version: 1,
+    bypass_for: answers.bypass_for,
+    prd_required_fields: answers.prd_required_fields,
+    adr_triggers: answers.adr_triggers,
+    docs_path: 'docs/upstream/',
+    docs_storage: answers.docs_storage,
+  }
+  if (answers.providers?.length) {
+    config.integrations = {}
+    for (const p of answers.providers) {
+      const key = PROVIDER_CONFIG_KEY[p.id] ?? p.id.replace(/-/g, '_')
+      config.integrations[key] = { client_id: p.client_id, allowed_domain: p.allowed_domain }
+    }
+  }
+  return yaml.dump(config, { lineWidth: -1 })
+}
+
+export async function writeCodeowners(targetDir, guardian) {
+  if (!guardian) return
+  const dir = join(targetDir, '.github')
+  await mkdir(dir, { recursive: true })
+  const codeownersPath = join(dir, 'CODEOWNERS')
+  const entry = `upstream.config.yaml ${guardian}\n`
+  if (await fileExists(codeownersPath)) {
+    const existing = readFileSync(codeownersPath, 'utf8')
+    if (existing.includes('upstream.config.yaml')) return
+    await appendFile(codeownersPath, `\n# upstream config — changes require guardian approval\n${entry}`)
+  } else {
+    await writeFile(codeownersPath, `# upstream config — changes require guardian approval\n${entry}`)
+  }
+}
+
+export async function scaffoldInto(targetDir, templatesDir, answers = null) {
   for (const [src, dest] of FILE_MAP) {
     const srcPath = join(templatesDir, src)
     const destPath = join(targetDir, dest)
@@ -30,10 +68,17 @@ export async function scaffoldInto(targetDir, templatesDir) {
   const hookDest = FILE_MAP.find(([src]) => src === HOOK_SRC)[1]
   await chmod(join(targetDir, hookDest), 0o755)
 
-  // Config: only write if absent (never overwrite org customizations)
   const configDest = join(targetDir, 'upstream.config.yaml')
   if (!await fileExists(configDest)) {
-    await copyFile(join(templatesDir, 'upstream.config.yaml'), configDest)
+    if (answers) {
+      await writeFile(configDest, generateConfig(answers))
+    } else {
+      await copyFile(join(templatesDir, 'upstream.config.yaml'), configDest)
+    }
+  }
+
+  if (answers?.guardian) {
+    await writeCodeowners(targetDir, answers.guardian)
   }
 
   // Ensure docs dir exists
