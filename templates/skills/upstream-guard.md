@@ -110,7 +110,7 @@ If the user asks to skip PRD or ADR creation at any point:
 ```markdown
 > ⚠️ **upstream skip**: [PRD|ADR] not created for `[branch]`.
 > **Reason:** [their justification]
-> **Logged in:** `docs/upstream/SKIPS.md`
+> **Logged in:** `<docs_path>/SKIPS.md`
 ```
 
-1. Respond: "Skip logged to `docs/upstream/SKIPS.md`. You can paste the above into your PR description. Development can proceed."
+1. Respond: "Skip logged to `<docs_path>/SKIPS.md`. You can paste the above into your PR description. Development can proceed."
