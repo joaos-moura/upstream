@@ -15,6 +15,13 @@ program
 program
   .command('init')
   .description('Scaffold upstream into the current repo')
+  .option('--from <file>', 'load answers from JSON file (non-interactive)')
+  .option('--docs-storage <value>', 'docs_storage: local or link')
+  .option('--provider <id>', 'provider ID: google-docs or confluence (single provider)')
+  .option('--client-id <id>', 'OAuth client_id for the provider')
+  .option('--allowed-domain <domain>', 'allowed domain for the provider')
+  .option('--guardian <handle>', 'GitHub handle or email for CODEOWNERS')
+  .option('--yes', 'skip Phase 2 (use org defaults)')
   .action(initCommand)
 
 program
