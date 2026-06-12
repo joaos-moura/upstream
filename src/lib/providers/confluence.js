@@ -15,6 +15,7 @@ function hostnameMatches(siteUrl, allowedDomain) {
 export function extractId(url) {
   if (!url || typeof url !== 'string') return null
   const baseUrl = url.match(/(https?:\/\/[^/]+)/)?.[1] ?? null
+  if (!baseUrl || !/\.atlassian\.net(\/|$)/i.test(baseUrl)) return null
   const pathMatch = url.match(/\/pages\/(\d+)/)
   if (pathMatch) return { id: pathMatch[1], baseUrl }
   const queryMatch = url.match(/[?&]pageId=(\d+)/)
@@ -85,7 +86,7 @@ export function validateDomain(identity, config) {
 
 // Store the matched site's URL in the token so createDocument knows the base URL.
 export function enrichToken(tokenData, identity, config) {
-  const site = identity.sites?.find(s => hostnameMatches(s.url, config.allowed_domain))
+  const site = identity?.sites?.find(s => hostnameMatches(s.url, config.allowed_domain))
   return { ...tokenData, base_url: site?.url ?? null }
 }
 
@@ -155,7 +156,8 @@ export async function refreshTokenIfNeeded(tokenData, appConfig) {
   const updated = {
     ...tokenData,
     access_token: newTokenData.access_token,
-    expiry: Date.now() + newTokenData.expires_in * 1000,
+    expiry: newTokenData.expires_in != null ? Date.now() + newTokenData.expires_in * 1000 : tokenData.expiry,
+    ...(newTokenData.refresh_token ? { refresh_token: newTokenData.refresh_token } : {}),
   }
   setProviderToken('confluence', updated)
   return updated
@@ -195,8 +197,12 @@ export async function createDocument(title, content, destination, tokenData) {
       res.on('end', () => {
         let parsed
         try { parsed = JSON.parse(data) } catch { parsed = null }
-        if ((res.statusCode === 200 || res.statusCode === 201) && parsed?._links?.webui) {
-          resolve({ url: `${tokenData.base_url}${parsed._links.webui}` })
+        if ((res.statusCode === 200 || res.statusCode === 201) && parsed) {
+          const webuiPath = parsed._links?.webui
+          const url = webuiPath
+            ? `${tokenData.base_url}${webuiPath}`
+            : `${tokenData.base_url}/wiki/spaces/${spaceKey}/pages/${parsed.id}`
+          resolve({ url })
         } else {
           const msg = parsed?.message || `Confluence API error ${res.statusCode}`
           reject(new Error(msg))
