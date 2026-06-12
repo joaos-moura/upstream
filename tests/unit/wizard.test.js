@@ -6,6 +6,7 @@ describe('runWizard with prefilled answers', () => {
   it('returns prefilled answers without prompting when all fields provided', async () => {
     const prefilled = {
       docs_storage: 'local',
+      docs_path: 'docs/rfcs/',
       providers: [],
       guardian: '@infra',
       bypass_for: ['fix/', 'hotfix/'],
@@ -19,10 +20,12 @@ describe('runWizard with prefilled answers', () => {
   it('uses WIZARD_DEFAULTS for org fields when not prefilled', async () => {
     const prefilled = {
       docs_storage: 'local',
+      docs_path: 'docs/upstream/',
       providers: [],
       guardian: '',
     }
     const result = await runWizard(prefilled)
+    expect(result.docs_path).toBe('docs/upstream/')
     expect(result.bypass_for).toEqual(WIZARD_DEFAULTS.bypass_for)
     expect(result.prd_required_fields).toEqual(WIZARD_DEFAULTS.prd_required_fields)
     expect(result.adr_triggers).toEqual(WIZARD_DEFAULTS.adr_triggers)
@@ -31,6 +34,7 @@ describe('runWizard with prefilled answers', () => {
   it('includes provider config when docs_storage is link', async () => {
     const prefilled = {
       docs_storage: 'link',
+      docs_path: 'docs/upstream/',
       providers: [{ id: 'google-docs', client_id: 'cid', allowed_domain: 'acme.com' }],
       guardian: '@infra',
     }

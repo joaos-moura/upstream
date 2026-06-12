@@ -52,6 +52,7 @@ export async function initCommand(options) {
       }
       if (options.yes) {
         prefilled.docs_storage = prefilled.docs_storage ?? 'local'
+        prefilled.docs_path = prefilled.docs_path ?? 'docs/upstream/'
         prefilled.providers = prefilled.providers ?? []
         prefilled.guardian = prefilled.guardian ?? ''
         prefilled.bypass_for = prefilled.bypass_for ?? WIZARD_DEFAULTS.bypass_for

@@ -11,6 +11,7 @@ const CLI = join(__dirname, '../../bin/upstream.js')
 
 const ANSWERS_LOCAL = JSON.stringify({
   docs_storage: 'local',
+  docs_path: 'docs/upstream/',
   providers: [],
   guardian: '',
   bypass_for: ['fix/', 'hotfix/'],
@@ -20,6 +21,7 @@ const ANSWERS_LOCAL = JSON.stringify({
 
 const ANSWERS_LINK = JSON.stringify({
   docs_storage: 'link',
+  docs_path: 'docs/upstream/',
   providers: [{ id: 'google-docs', client_id: 'cid', allowed_domain: 'acme.com' }],
   guardian: '@infra-team',
   bypass_for: ['fix/'],

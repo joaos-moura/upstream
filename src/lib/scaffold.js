@@ -28,7 +28,7 @@ export function generateConfig(answers) {
     bypass_for: answers.bypass_for,
     prd_required_fields: answers.prd_required_fields,
     adr_triggers: answers.adr_triggers,
-    docs_path: 'docs/upstream/',
+    docs_path: answers.docs_path ?? 'docs/upstream/',
     docs_storage: answers.docs_storage,
   }
   if (answers.providers?.length) {

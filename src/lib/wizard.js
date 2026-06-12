@@ -26,6 +26,12 @@ export async function runWizard(prefilled = {}) {
       ],
     })
 
+  const docs_path = prefilled.docs_path
+    ?? await input({
+      message: 'Path to store PRDs, ADRs, and skip log:',
+      default: 'docs/upstream/',
+    })
+
   let providers = prefilled.providers ?? null
   if (docs_storage === 'link' && providers === null) {
     const selectedIds = await checkbox({
@@ -96,5 +102,5 @@ export async function runWizard(prefilled = {}) {
     }
   }
 
-  return { docs_storage, providers, guardian, ...orgDefaults }
+  return { docs_storage, docs_path, providers, guardian, ...orgDefaults }
 }
