@@ -1,5 +1,5 @@
 import https from 'https'
-import { setProviderToken, getProviderToken } from '../tokens.js'
+import { setProviderToken } from '../tokens.js'
 
 export function extractDocId(url) {
   const match = url.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/)
