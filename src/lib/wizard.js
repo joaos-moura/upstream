@@ -1,4 +1,4 @@
-import { select, input, confirm } from '@inquirer/prompts'
+import { select, checkbox, input, confirm } from '@inquirer/prompts'
 
 export const WIZARD_DEFAULTS = {
   bypass_for: ['fix/', 'hotfix/', 'chore/', 'docs/'],
@@ -48,22 +48,25 @@ export async function runWizard(prefilled = {}) {
 
   let providers = prefilled.providers ?? null
   if (docs_storage === 'link' && providers === null) {
-    const selectedId = await select({
-      message: 'Which provider will you use?',
+    const selectedIds = await checkbox({
+      message: 'Which providers will you use?',
       choices: Object.entries(PROVIDER_LABELS).map(([value, name]) => ({ value, name })),
     })
-    const client_id = await input({
-      message: `${PROVIDER_LABELS[selectedId]} client_id:`,
-      validate: (v) => validateClientId(selectedId, v),
-    })
-    const domainHint = selectedId === 'confluence'
-      ? 'your Atlassian site domain (e.g. acme.atlassian.net)'
-      : 'your org domain (e.g. acme.com)'
-    const allowed_domain = await input({
-      message: `${PROVIDER_LABELS[selectedId]} allowed domain — ${domainHint}:`,
-      validate: validateDomain,
-    })
-    providers = [{ id: selectedId, client_id, allowed_domain }]
+    providers = []
+    for (const id of selectedIds) {
+      const client_id = await input({
+        message: `${PROVIDER_LABELS[id]} client_id:`,
+        validate: (v) => validateClientId(id, v),
+      })
+      const domainHint = id === 'confluence'
+        ? 'your Atlassian site domain (e.g. acme.atlassian.net)'
+        : 'your org domain (e.g. acme.com)'
+      const allowed_domain = await input({
+        message: `${PROVIDER_LABELS[id]} allowed domain — ${domainHint}:`,
+        validate: validateDomain,
+      })
+      providers.push({ id, client_id, allowed_domain })
+    }
   }
   if (providers === null) providers = []
 

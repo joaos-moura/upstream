@@ -82,7 +82,19 @@ export async function runOAuthFlow(providerId, providerDef, appConfig) {
   console.log(`If browser doesn't open, visit:\n  ${authUrl.toString()}`)
   try { await open(authUrl.toString()) } catch { /* user has URL in console */ }
 
-  const code = await waitForCallback(port, state)
+  const FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+  let fi = 0
+  const spinner = setInterval(() => {
+    process.stderr.write(`\r${FRAMES[fi++ % FRAMES.length]} Waiting for browser callback... (Ctrl+C to cancel)`)
+  }, 100)
+
+  let code
+  try {
+    code = await waitForCallback(port, state)
+  } finally {
+    clearInterval(spinner)
+    process.stderr.write('\r\x1b[K')
+  }
   const tokenResponse = await providerDef.exchangeCode(code, appConfig.client_id, redirectUri, verifier)
 
   const identity = await providerDef.getIdentity(tokenResponse.access_token, tokenResponse)

@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 import { join } from 'path'
 import { fileURLToPath } from 'url'
-import { readFileSync, writeFileSync, existsSync, appendFileSync, readdirSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, appendFileSync, readdirSync, mkdirSync } from 'fs'
 import { confirm } from '@inquirer/prompts'
 import { scaffoldInto } from '../lib/scaffold.js'
 import { writeMcpSettings } from '../lib/settings.js'
@@ -65,6 +65,17 @@ function ensureClientSecretEnv(target, envKey, label) {
   if (added) console.log(chalk.yellow(`  Fill in the value: ${envKey}=<your-secret>`))
 }
 
+function ensureGitignore(target) {
+  const GITIGNORE = join(target, '.gitignore')
+  const ENTRIES = ['.env', '.env.local', '.env.test']
+  const existing = existsSync(GITIGNORE) ? readFileSync(GITIGNORE, 'utf8') : ''
+  const missing = ENTRIES.filter(e => !existing.split('\n').some(l => l.trim() === e))
+  if (missing.length === 0) return
+  const block = `\n# upstream: local secrets — never commit\n${missing.join('\n')}\n`
+  appendFileSync(GITIGNORE, block)
+  console.log(chalk.green(`✓ .gitignore updated (${missing.join(', ')})`))
+}
+
 function validateAnswers(answers) {
   if (!['local', 'link'].includes(answers.docs_storage)) {
     throw new Error(`docs_storage must be "local" or "link", got "${answers.docs_storage}"`)
@@ -114,6 +125,7 @@ export async function initCommand(options) {
 
     await scaffoldInto(target, TEMPLATES, answers)
     writeMcpSettings(target)
+    ensureGitignore(target)
 
     if (answers.providers?.some(p => p.id === 'google-docs')) {
       ensureClientSecretEnv(target, 'UPSTREAM_GOOGLE_CLIENT_SECRET', 'Google')

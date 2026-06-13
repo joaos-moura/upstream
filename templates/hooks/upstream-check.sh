@@ -71,6 +71,9 @@ CACHE_FILE="/tmp/upstream-checked-${PPID}-${SLUG}"
 # Already ran this session — exit silently regardless of PRD state
 [[ -f "$CACHE_FILE" ]] && exit 0
 
+# Clean up cache files older than 1 day
+find /tmp -maxdepth 1 -name 'upstream-checked-*' -mtime +1 -delete 2>/dev/null || true
+
 touch "$CACHE_FILE"
 
 [[ $PRD_FOUND -eq 1 ]] && exit 0

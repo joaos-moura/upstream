@@ -5,7 +5,7 @@ for (const f of ['.env.local', '.env']) {
 import { Command } from 'commander'
 import { initCommand } from '../src/commands/init.js'
 import { upgradeCommand } from '../src/commands/upgrade.js'
-import { authCommand } from '../src/commands/auth.js'
+import { authCommand, authLogoutCommand } from '../src/commands/auth.js'
 import { startMcpServer } from '../src/lib/mcp/server.js'
 
 const program = new Command()
@@ -36,6 +36,11 @@ program
   .command('auth <provider>')
   .description('Authenticate with a documentation provider (google-docs) or check status (status)')
   .action(authCommand)
+
+program
+  .command('logout <provider>')
+  .description('Remove stored token for a provider (or "all")')
+  .action(authLogoutCommand)
 
 program
   .command('mcp')

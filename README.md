@@ -62,6 +62,7 @@ Your team gets the plugin on their next `git pull`. No global install required o
 | `upstream auth google-docs` | Connect Google Docs via OAuth (PKCE) |
 | `upstream auth confluence` | Connect Confluence via OAuth (PKCE) |
 | `upstream auth status` | Show authentication status for all providers |
+| `upstream logout <provider>` | Remove stored token for a provider (or `all`) |
 | `upstream mcp` | Start the upstream MCP server (called automatically by Claude Code) |
 
 ### `upstream init` flags

@@ -4,7 +4,22 @@ import { join } from 'path'
 import { readConfig } from '../lib/config.js'
 import { PROVIDERS } from '../lib/providers/registry.js'
 import { runOAuthFlow } from '../lib/auth/oauth2.js'
-import { getProviderToken } from '../lib/tokens.js'
+import { getProviderToken, deleteProviderToken } from '../lib/tokens.js'
+
+export async function authLogoutCommand(provider) {
+  if (provider === 'all') {
+    for (const id of Object.keys(PROVIDERS)) deleteProviderToken(id)
+    console.log(chalk.green('✓ All provider tokens removed.'))
+    return
+  }
+  if (!PROVIDERS[provider]) {
+    console.error(chalk.red(`Unknown provider: ${provider}`))
+    console.error(`Known providers: ${Object.keys(PROVIDERS).join(', ')}, all`)
+    process.exit(1)
+  }
+  deleteProviderToken(provider)
+  console.log(chalk.green(`✓ ${provider} token removed.`))
+}
 
 export async function authCommand(provider) {
   if (provider === 'status') return statusCommand()
