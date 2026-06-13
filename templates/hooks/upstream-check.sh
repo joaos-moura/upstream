@@ -72,7 +72,12 @@ CACHE_FILE="/tmp/upstream-checked-${PPID}-${SLUG}"
 [[ -f "$CACHE_FILE" ]] && exit 0
 
 # Clean up cache files older than 1 day
-find /tmp -maxdepth 1 -name 'upstream-checked-*' -mtime +1 -delete 2>/dev/null || true
+_now=$(date +%s)
+for _f in /tmp/upstream-checked-*; do
+  [[ -f "$_f" ]] || continue
+  _mtime=$(stat -f %m "$_f" 2>/dev/null || stat -c %Y "$_f" 2>/dev/null || echo 0)
+  (( _now - _mtime > 86400 )) && rm -f "$_f" 2>/dev/null || true
+done
 
 touch "$CACHE_FILE"
 
