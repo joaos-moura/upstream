@@ -90,7 +90,8 @@ export async function scaffoldInto(targetDir, templatesDir, answers = null) {
   }
 
   // Ensure docs dir exists
-  const docsDir = join(targetDir, 'docs/upstream')
+  const docsPath = answers?.docs_path ?? 'docs/upstream/'
+  const docsDir = join(targetDir, docsPath)
   await mkdir(docsDir, { recursive: true })
   const gitkeep = join(docsDir, '.gitkeep')
   if (!await fileExists(gitkeep)) {
