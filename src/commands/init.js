@@ -25,6 +25,17 @@ function loadFromFile(filePath) {
 
 function ensureClientSecretEnv(target, envKey, label) {
   const COMMENT = `\n# upstream: ${label} OAuth secret (required for upstream auth)\n${envKey}=\n`
+  const EXAMPLE_COMMENT = `\n# upstream: ${label} OAuth secret (required for upstream auth)\n${envKey}=your-${label.toLowerCase()}-client-secret\n`
+
+  // Always update .env.example (committed — shows required vars without real values)
+  const examplePath = join(target, '.env.example')
+  const exampleContent = existsSync(examplePath) ? readFileSync(examplePath, 'utf8') : ''
+  if (!exampleContent.includes(envKey)) {
+    appendFileSync(examplePath, EXAMPLE_COMMENT)
+    console.log(chalk.green(`✓ ${envKey} added to .env.example`))
+  } else {
+    console.log(chalk.green(`✓ ${envKey} already in .env.example`))
+  }
 
   const existing = readdirSync(target).filter(f =>
     f.startsWith('.env') && !f.includes('example') && !f.includes('sample')
