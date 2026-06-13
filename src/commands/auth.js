@@ -27,6 +27,14 @@ export async function authCommand(provider) {
     process.exit(1)
   }
 
+  if (provider === 'confluence' && !process.env.UPSTREAM_CONFLUENCE_CLIENT_SECRET) {
+    console.error(chalk.red('upstream auth: UPSTREAM_CONFLUENCE_CLIENT_SECRET env var is not set.'))
+    console.error('')
+    console.error('Set it in your shell or project startup script:')
+    console.error('  export UPSTREAM_CONFLUENCE_CLIENT_SECRET="your-secret"')
+    process.exit(1)
+  }
+
   if (!appConfig.client_id) {
     console.error(chalk.red(`upstream auth: ${provider} credentials not configured.`))
     console.error('')

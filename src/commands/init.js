@@ -23,9 +23,8 @@ function loadFromFile(filePath) {
   }
 }
 
-function ensureGoogleClientSecretEnv(target) {
-  const ENV_KEY = 'UPSTREAM_GOOGLE_CLIENT_SECRET'
-  const COMMENT = `\n# upstream: Google OAuth secret (required for upstream auth)\n${ENV_KEY}=\n`
+function ensureClientSecretEnv(target, envKey, label) {
+  const COMMENT = `\n# upstream: ${label} OAuth secret (required for upstream auth)\n${envKey}=\n`
 
   const existing = readdirSync(target).filter(f =>
     f.startsWith('.env') && !f.includes('example') && !f.includes('sample')
@@ -33,10 +32,10 @@ function ensureGoogleClientSecretEnv(target) {
 
   if (existing.length === 0) {
     for (const filename of ['.env', '.env.local', '.env.test']) {
-      writeFileSync(join(target, filename), `# upstream: Google OAuth secret (required for upstream auth)\n${ENV_KEY}=\n`)
-      console.log(chalk.green(`✓ ${filename} created with ${ENV_KEY}`))
+      writeFileSync(join(target, filename), `# upstream: ${label} OAuth secret (required for upstream auth)\n${envKey}=\n`)
+      console.log(chalk.green(`✓ ${filename} created with ${envKey}`))
     }
-    console.log(chalk.yellow(`  Fill in the value in each file: ${ENV_KEY}=<your-secret>`))
+    console.log(chalk.yellow(`  Fill in the value in each file: ${envKey}=<your-secret>`))
     return
   }
 
@@ -44,15 +43,15 @@ function ensureGoogleClientSecretEnv(target) {
   for (const filename of existing) {
     const envPath = join(target, filename)
     const content = readFileSync(envPath, 'utf8')
-    if (content.includes(ENV_KEY)) {
-      console.log(chalk.green(`✓ ${ENV_KEY} already in ${filename}`))
+    if (content.includes(envKey)) {
+      console.log(chalk.green(`✓ ${envKey} already in ${filename}`))
     } else {
       appendFileSync(envPath, COMMENT)
-      console.log(chalk.green(`✓ ${ENV_KEY} added to ${filename}`))
+      console.log(chalk.green(`✓ ${envKey} added to ${filename}`))
       added = true
     }
   }
-  if (added) console.log(chalk.yellow(`  Fill in the value: ${ENV_KEY}=<your-secret>`))
+  if (added) console.log(chalk.yellow(`  Fill in the value: ${envKey}=<your-secret>`))
 }
 
 function validateAnswers(answers) {
@@ -106,7 +105,10 @@ export async function initCommand(options) {
     writeMcpSettings(target)
 
     if (answers.providers?.some(p => p.id === 'google-docs')) {
-      ensureGoogleClientSecretEnv(target)
+      ensureClientSecretEnv(target, 'UPSTREAM_GOOGLE_CLIENT_SECRET', 'Google')
+    }
+    if (answers.providers?.some(p => p.id === 'confluence')) {
+      ensureClientSecretEnv(target, 'UPSTREAM_CONFLUENCE_CLIENT_SECRET', 'Confluence')
     }
 
     let shouldValidate = false
@@ -117,14 +119,17 @@ export async function initCommand(options) {
       })
     }
 
+    const SECRET_ENV = { 'google-docs': 'UPSTREAM_GOOGLE_CLIENT_SECRET', 'confluence': 'UPSTREAM_CONFLUENCE_CLIENT_SECRET' }
+
     if (shouldValidate && answers.providers?.length > 0) {
       const provider = answers.providers[0]
       const providerDef = PROVIDERS[provider.id]
+      const secretEnvKey = SECRET_ENV[provider.id]
 
-      if (provider.id === 'google-docs' && !process.env.UPSTREAM_GOOGLE_CLIENT_SECRET) {
+      if (secretEnvKey && !process.env[secretEnvKey]) {
         console.log('')
-        console.log(chalk.yellow('⚠ Cannot validate: UPSTREAM_GOOGLE_CLIENT_SECRET is not set in this shell.'))
-        console.log(chalk.yellow('  Fill in your .env file and run: upstream auth google-docs'))
+        console.log(chalk.yellow(`⚠ Cannot validate: ${secretEnvKey} is not set in this shell.`))
+        console.log(chalk.yellow(`  Fill in your .env file and run: upstream auth ${provider.id}`))
       } else {
         console.log('')
         console.log(chalk.blue('upstream:'), `validating ${provider.id} integration...`)

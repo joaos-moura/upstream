@@ -28,9 +28,12 @@ export function extractId(url) {
 }
 
 export function exchangeCode(code, clientId, redirectUri, codeVerifier) {
+  const clientSecret = process.env.UPSTREAM_CONFLUENCE_CLIENT_SECRET
+  if (!clientSecret) throw new Error('UPSTREAM_CONFLUENCE_CLIENT_SECRET env var is not set')
   const body = JSON.stringify({
     grant_type: 'authorization_code',
     client_id: clientId,
+    client_secret: clientSecret,
     code,
     redirect_uri: redirectUri,
     code_verifier: codeVerifier,
@@ -127,10 +130,13 @@ export function getMetadata({ id, baseUrl }, accessToken) {
 export async function refreshTokenIfNeeded(tokenData, appConfig) {
   if (tokenData.expiry && tokenData.expiry - Date.now() > 5 * 60 * 1000) return tokenData
 
+  const clientSecret = process.env.UPSTREAM_CONFLUENCE_CLIENT_SECRET
+  if (!clientSecret) throw new Error('UPSTREAM_CONFLUENCE_CLIENT_SECRET env var is not set')
   const body = JSON.stringify({
     grant_type: 'refresh_token',
     refresh_token: tokenData.refresh_token,
     client_id: appConfig.client_id,
+    client_secret: clientSecret,
   })
 
   const newTokenData = await new Promise((resolve, reject) => {
