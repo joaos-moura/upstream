@@ -66,6 +66,13 @@ if [[ $PRD_FOUND -eq 0 ]]; then
   done < <(ls "$DOCS_PATH"/PRD-*.md 2>/dev/null || true)
 fi
 
-if [[ $PRD_FOUND -eq 0 ]]; then
-  echo "UPSTREAM: feature detected without PRD. Invoke upstream-guard before continuing."
-fi
+CACHE_FILE="/tmp/upstream-checked-${PPID}-${SLUG}"
+
+# Already ran this session — exit silently regardless of PRD state
+[[ -f "$CACHE_FILE" ]] && exit 0
+
+touch "$CACHE_FILE"
+
+[[ $PRD_FOUND -eq 1 ]] && exit 0
+
+echo "UPSTREAM: feature detected without PRD. Invoke upstream-guard before continuing."
