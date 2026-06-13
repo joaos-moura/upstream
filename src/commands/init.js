@@ -122,6 +122,10 @@ export async function initCommand(options) {
     const SECRET_ENV = { 'google-docs': 'UPSTREAM_GOOGLE_CLIENT_SECRET', 'confluence': 'UPSTREAM_CONFLUENCE_CLIENT_SECRET' }
 
     if (shouldValidate && answers.providers?.length > 0) {
+      for (const f of ['.env.local', '.env']) {
+        try { process.loadEnvFile(join(target, f)) } catch { /* not found */ }
+      }
+
       const provider = answers.providers[0]
       const providerDef = PROVIDERS[provider.id]
       const secretEnvKey = SECRET_ENV[provider.id]
