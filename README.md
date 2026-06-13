@@ -45,7 +45,7 @@ git commit -m "feat: add upstream Claude Code plugin"
 git push
 ```
 
-`upstream init` runs an interactive wizard that configures `upstream.config.yaml`, scaffolds `.claude/`, and optionally sets up a CODEOWNERS guardian.
+`upstream init` runs an interactive wizard that configures `upstream.config.yaml`, scaffolds `.claude/`, optionally sets up a CODEOWNERS guardian, and automatically updates `.gitignore` to exclude `.env`/`.env.local`/`.env.test`.
 
 Your team gets the plugin on their next `git pull`. No global install required on their machines — Claude Code picks up `.claude/` automatically.
 
@@ -253,6 +253,7 @@ If a PRD or ADR genuinely isn't needed, developers can skip with a justification
   settings.json                 # MCP server registration (upstream mcp)
 upstream.config.yaml            # org configuration
 .env.example                    # env var placeholders (shows required secrets, safe to commit)
+.gitignore                      # updated by upstream init to exclude .env/.env.local/.env.test
 .github/
   CODEOWNERS                    # guardian entry (if configured)
 <docs_path>/                    # your PRDs, ADRs, and skip log
