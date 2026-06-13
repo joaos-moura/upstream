@@ -9,13 +9,10 @@ export function extractId(url) {
 }
 
 export function exchangeCode(code, clientId, redirectUri, codeVerifier) {
-  const body = new URLSearchParams({
-    code,
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    grant_type: 'authorization_code',
-    code_verifier: codeVerifier,
-  }).toString()
+  const clientSecret = process.env.UPSTREAM_GOOGLE_CLIENT_SECRET
+  if (!clientSecret) throw new Error('UPSTREAM_GOOGLE_CLIENT_SECRET env var is not set')
+  const params = { code, client_id: clientId, redirect_uri: redirectUri, grant_type: 'authorization_code', code_verifier: codeVerifier, client_secret: clientSecret }
+  const body = new URLSearchParams(params).toString()
 
   return new Promise((resolve, reject) => {
     const req = https.request({
@@ -98,11 +95,9 @@ export async function getMetadata(docId, accessToken) {
 export async function refreshTokenIfNeeded(tokenData, appConfig) {
   if (tokenData.expiry && tokenData.expiry - Date.now() > 5 * 60 * 1000) return tokenData
 
-  const body = new URLSearchParams({
-    refresh_token: tokenData.refresh_token,
-    client_id: appConfig.client_id,
-    grant_type: 'refresh_token',
-  }).toString()
+  const clientSecret = process.env.UPSTREAM_GOOGLE_CLIENT_SECRET
+  if (!clientSecret) throw new Error('UPSTREAM_GOOGLE_CLIENT_SECRET env var is not set')
+  const body = new URLSearchParams({ refresh_token: tokenData.refresh_token, client_id: appConfig.client_id, client_secret: clientSecret, grant_type: 'refresh_token' }).toString()
 
   const newTokenData = await new Promise((resolve, reject) => {
     const req = https.request({

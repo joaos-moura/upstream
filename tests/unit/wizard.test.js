@@ -14,7 +14,7 @@ describe('runWizard with prefilled answers', () => {
       adr_triggers: ['database_schema_change'],
     }
     const result = await runWizard(prefilled)
-    expect(result).toEqual(prefilled)
+    expect(result).toEqual({ ...prefilled, validate: false })
   })
 
   it('uses WIZARD_DEFAULTS for org fields when not prefilled', async () => {

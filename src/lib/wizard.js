@@ -1,4 +1,4 @@
-import { select, checkbox, input, confirm } from '@inquirer/prompts'
+import { select, input, confirm } from '@inquirer/prompts'
 
 export const WIZARD_DEFAULTS = {
   bypass_for: ['fix/', 'hotfix/', 'chore/', 'docs/'],
@@ -13,6 +13,24 @@ export const WIZARD_DEFAULTS = {
 }
 
 const PROVIDER_LABELS = { 'google-docs': 'Google Docs', 'confluence': 'Confluence' }
+
+const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z]{2,})+$/i
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function validateClientId(provider, value) {
+  if (!value.trim()) return 'client_id is required'
+  if (provider === 'google-docs' && !value.endsWith('.apps.googleusercontent.com'))
+    return 'Google client_id must end in .apps.googleusercontent.com'
+  if (provider === 'confluence' && !UUID_RE.test(value.trim()))
+    return 'Confluence client_id must be a UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)'
+  return true
+}
+
+export function validateDomain(value) {
+  if (!value.trim()) return 'allowed_domain is required'
+  if (!DOMAIN_RE.test(value.trim())) return 'Enter a valid domain (e.g. acme.com)'
+  return true
+}
 
 export async function runWizard(prefilled = {}) {
   // Phase 1 — critical
@@ -34,16 +52,19 @@ export async function runWizard(prefilled = {}) {
 
   let providers = prefilled.providers ?? null
   if (docs_storage === 'link' && providers === null) {
-    const selectedIds = await checkbox({
-      message: 'Which providers will you use?',
+    const selectedId = await select({
+      message: 'Which provider will you use?',
       choices: Object.entries(PROVIDER_LABELS).map(([value, name]) => ({ value, name })),
     })
-    providers = []
-    for (const id of selectedIds) {
-      const client_id = await input({ message: `${PROVIDER_LABELS[id]} client_id:` })
-      const allowed_domain = await input({ message: `${PROVIDER_LABELS[id]} allowed domain (e.g. acme.com):` })
-      providers.push({ id, client_id, allowed_domain })
-    }
+    const client_id = await input({
+      message: `${PROVIDER_LABELS[selectedId]} client_id:`,
+      validate: (v) => validateClientId(selectedId, v),
+    })
+    const allowed_domain = await input({
+      message: `${PROVIDER_LABELS[selectedId]} allowed domain (e.g. acme.com):`,
+      validate: validateDomain,
+    })
+    providers = [{ id: selectedId, client_id, allowed_domain }]
   }
   if (providers === null) providers = []
 
@@ -102,5 +123,13 @@ export async function runWizard(prefilled = {}) {
     }
   }
 
-  return { docs_storage, docs_path, providers, guardian, ...orgDefaults }
+  let validate = false
+  if (providers.length > 0 && process.stdin.isTTY) {
+    validate = await confirm({
+      message: 'Validate integration now? (opens browser to test OAuth — no credentials saved)',
+      default: true,
+    })
+  }
+
+  return { docs_storage, docs_path, providers, guardian, ...orgDefaults, validate }
 }

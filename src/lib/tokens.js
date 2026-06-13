@@ -29,3 +29,9 @@ export function setProviderToken(provider, tokenData) {
   tokens[provider] = tokenData
   writeTokens(tokens)
 }
+
+export function deleteProviderToken(provider) {
+  const tokens = readTokens()
+  delete tokens[provider]
+  writeTokens(tokens)
+}

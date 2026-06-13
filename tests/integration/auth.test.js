@@ -9,19 +9,22 @@ const CLI = join(__dirname, '../../bin/upstream.js')
 const TMP = '/tmp/upstream-auth-test'
 
 describe('upstream auth', () => {
-  it('shows error when google_docs credentials missing from config', () => {
+  it('shows error when UPSTREAM_GOOGLE_CLIENT_SECRET env var is missing', () => {
     mkdirSync(TMP, { recursive: true })
     writeFileSync(join(TMP, 'upstream.config.yaml'), 'version: 1\n')
+    const saved = process.env.UPSTREAM_GOOGLE_CLIENT_SECRET
+    delete process.env.UPSTREAM_GOOGLE_CLIENT_SECRET
 
     let output = ''
     try {
-      execSync(`node ${CLI} auth google-docs`, { cwd: TMP, stdio: 'pipe' })
+      execSync(`node ${CLI} auth google-docs`, { cwd: TMP, stdio: 'pipe', env: { ...process.env } })
     } catch (err) {
       output = err.stderr?.toString() || err.stdout?.toString() || ''
     }
     rmSync(TMP, { recursive: true, force: true })
+    if (saved !== undefined) process.env.UPSTREAM_GOOGLE_CLIENT_SECRET = saved
 
-    expect(output).toMatch(/client_id|credentials|configure/i)
+    expect(output).toMatch(/UPSTREAM_GOOGLE_CLIENT_SECRET/i)
   })
 
   it('upstream auth status exits 0 and shows providers', () => {

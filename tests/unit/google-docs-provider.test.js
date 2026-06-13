@@ -51,7 +51,7 @@ describe('validateDomain', () => {
 })
 
 describe('exchangeCode', () => {
-  it('is a function accepting 4 params (no client_secret)', () => {
+  it('is a function accepting 4 params (client_secret via env var)', () => {
     expect(typeof exchangeCode).toBe('function')
     expect(exchangeCode.length).toBe(4)
   })
