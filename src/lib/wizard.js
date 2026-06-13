@@ -56,8 +56,11 @@ export async function runWizard(prefilled = {}) {
       message: `${PROVIDER_LABELS[selectedId]} client_id:`,
       validate: (v) => validateClientId(selectedId, v),
     })
+    const domainHint = selectedId === 'confluence'
+      ? 'your Atlassian site domain (e.g. acme.atlassian.net)'
+      : 'your org domain (e.g. acme.com)'
     const allowed_domain = await input({
-      message: `${PROVIDER_LABELS[selectedId]} allowed domain (e.g. acme.com):`,
+      message: `${PROVIDER_LABELS[selectedId]} allowed domain — ${domainHint}:`,
       validate: validateDomain,
     })
     providers = [{ id: selectedId, client_id, allowed_domain }]
