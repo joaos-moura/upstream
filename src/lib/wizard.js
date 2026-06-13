@@ -15,14 +15,10 @@ export const WIZARD_DEFAULTS = {
 const PROVIDER_LABELS = { 'google-docs': 'Google Docs', 'confluence': 'Confluence' }
 
 const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z]{2,})+$/i
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
 export function validateClientId(provider, value) {
   if (!value.trim()) return 'client_id is required'
   if (provider === 'google-docs' && !value.endsWith('.apps.googleusercontent.com'))
     return 'Google client_id must end in .apps.googleusercontent.com'
-  if (provider === 'confluence' && !UUID_RE.test(value.trim()))
-    return 'Confluence client_id must be a UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)'
   return true
 }
 
