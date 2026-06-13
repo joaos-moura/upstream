@@ -63,7 +63,7 @@ export async function runOAuthFlow(providerId, providerDef, appConfig) {
     )
   }
 
-  const port = await findFreePort()
+  const port = providerDef.callbackPort ?? await findFreePort()
   const redirectUri = `http://localhost:${port}/callback`
   const state = randomBytes(16).toString('hex')
   const { verifier, challenge } = generatePKCE()

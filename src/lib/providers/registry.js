@@ -49,6 +49,7 @@ export const PROVIDERS = {
     authUrl: 'https://auth.atlassian.com/authorize',
     scopes: ['read:confluence-content.all', 'write:confluence-content', 'offline_access'],
     authParams: { audience: 'api.atlassian.com', prompt: 'consent' },
+    callbackPort: 27182,
     enrichToken: confluenceEnrichToken,
     extractId: confluenceExtractId,
     exchangeCode: confluenceExchangeCode,
