@@ -1,5 +1,5 @@
 import { copyFile, mkdir, writeFile, appendFile, access, chmod } from 'fs/promises'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import yaml from 'js-yaml'
 
@@ -75,6 +75,14 @@ export async function scaffoldInto(targetDir, templatesDir, answers = null) {
     } else {
       await copyFile(join(templatesDir, 'upstream.config.yaml'), configDest)
     }
+  } else if (answers?.providers?.length) {
+    const raw = yaml.load(readFileSync(configDest, 'utf8')) ?? {}
+    raw.integrations = raw.integrations ?? {}
+    for (const p of answers.providers) {
+      const key = PROVIDER_CONFIG_KEY[p.id] ?? p.id.replace(/-/g, '_')
+      raw.integrations[key] = { client_id: p.client_id, allowed_domain: p.allowed_domain }
+    }
+    await writeFile(configDest, yaml.dump(raw, { lineWidth: -1 }))
   }
 
   if (answers?.guardian) {

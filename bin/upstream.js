@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+for (const f of ['.env.local', '.env']) {
+  try { process.loadEnvFile(f) } catch { /* file doesn't exist or can't be read */ }
+}
 import { Command } from 'commander'
 import { initCommand } from '../src/commands/init.js'
 import { upgradeCommand } from '../src/commands/upgrade.js'

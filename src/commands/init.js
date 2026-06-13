@@ -1,12 +1,11 @@
 import chalk from 'chalk'
 import { join } from 'path'
 import { fileURLToPath } from 'url'
-import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs'
-import { confirm, input } from '@inquirer/prompts'
-import yaml from 'js-yaml'
+import { readFileSync, writeFileSync, existsSync, appendFileSync, readdirSync } from 'fs'
+import { confirm } from '@inquirer/prompts'
 import { scaffoldInto } from '../lib/scaffold.js'
 import { writeMcpSettings } from '../lib/settings.js'
-import { runWizard, WIZARD_DEFAULTS, validateClientId, validateDomain } from '../lib/wizard.js'
+import { runWizard, WIZARD_DEFAULTS } from '../lib/wizard.js'
 import { runOAuthFlow } from '../lib/auth/oauth2.js'
 import { PROVIDERS } from '../lib/providers/registry.js'
 import { deleteProviderToken } from '../lib/tokens.js'
@@ -25,27 +24,35 @@ function loadFromFile(filePath) {
 }
 
 function ensureGoogleClientSecretEnv(target) {
-  const candidates = ['.env.local', '.env']
   const ENV_KEY = 'UPSTREAM_GOOGLE_CLIENT_SECRET'
+  const COMMENT = `\n# upstream: Google OAuth secret (required for upstream auth)\n${ENV_KEY}=\n`
 
-  for (const filename of candidates) {
-    const envPath = join(target, filename)
-    if (existsSync(envPath)) {
-      const content = readFileSync(envPath, 'utf8')
-      if (content.includes(ENV_KEY)) {
-        console.log(chalk.green(`✓ ${ENV_KEY} already in ${filename}`))
-        return
-      }
-      appendFileSync(envPath, `\n# upstream: Google OAuth secret (required for upstream auth)\n${ENV_KEY}=\n`)
-      console.log(chalk.green(`✓ ${ENV_KEY} added to ${filename}`))
-      console.log(chalk.yellow(`  Fill in the value: ${ENV_KEY}=<your-secret>`))
-      return
+  const existing = readdirSync(target).filter(f =>
+    f.startsWith('.env') && !f.includes('example') && !f.includes('sample')
+  )
+
+  if (existing.length === 0) {
+    for (const filename of ['.env', '.env.local', '.env.test']) {
+      writeFileSync(join(target, filename), `# upstream: Google OAuth secret (required for upstream auth)\n${ENV_KEY}=\n`)
+      console.log(chalk.green(`✓ ${filename} created with ${ENV_KEY}`))
     }
+    console.log(chalk.yellow(`  Fill in the value in each file: ${ENV_KEY}=<your-secret>`))
+    return
   }
 
-  writeFileSync(join(target, '.env'), `# upstream: Google OAuth secret (required for upstream auth)\n${ENV_KEY}=\n`)
-  console.log(chalk.green(`✓ .env created with ${ENV_KEY}`))
-  console.log(chalk.yellow(`  Fill in the value: ${ENV_KEY}=<your-secret>`))
+  let added = false
+  for (const filename of existing) {
+    const envPath = join(target, filename)
+    const content = readFileSync(envPath, 'utf8')
+    if (content.includes(ENV_KEY)) {
+      console.log(chalk.green(`✓ ${ENV_KEY} already in ${filename}`))
+    } else {
+      appendFileSync(envPath, COMMENT)
+      console.log(chalk.green(`✓ ${ENV_KEY} added to ${filename}`))
+      added = true
+    }
+  }
+  if (added) console.log(chalk.yellow(`  Fill in the value: ${ENV_KEY}=<your-secret>`))
 }
 
 function validateAnswers(answers) {
@@ -102,39 +109,32 @@ export async function initCommand(options) {
       ensureGoogleClientSecretEnv(target)
     }
 
-    if (answers.validate && answers.providers?.length > 0) {
+    let shouldValidate = false
+    if (answers.providers?.length > 0 && process.stdin.isTTY) {
+      shouldValidate = await confirm({
+        message: 'Validate integration now? (opens browser to test OAuth — no credentials saved)',
+        default: true,
+      })
+    }
+
+    if (shouldValidate && answers.providers?.length > 0) {
       const provider = answers.providers[0]
       const providerDef = PROVIDERS[provider.id]
-      const configPath = join(target, 'upstream.config.yaml')
-      let appConfig = { client_id: provider.client_id, allowed_domain: provider.allowed_domain }
 
-      while (true) {
+      if (provider.id === 'google-docs' && !process.env.UPSTREAM_GOOGLE_CLIENT_SECRET) {
+        console.log('')
+        console.log(chalk.yellow('⚠ Cannot validate: UPSTREAM_GOOGLE_CLIENT_SECRET is not set in this shell.'))
+        console.log(chalk.yellow('  Fill in your .env file and run: upstream auth google-docs'))
+      } else {
         console.log('')
         console.log(chalk.blue('upstream:'), `validating ${provider.id} integration...`)
         try {
-          await runOAuthFlow(provider.id, providerDef, appConfig)
+          await runOAuthFlow(provider.id, providerDef, { client_id: provider.client_id, allowed_domain: provider.allowed_domain })
           deleteProviderToken(provider.id)
           console.log(chalk.green(`✓ ${provider.id} integration validated`))
-          break
         } catch (err) {
           console.error(chalk.yellow(`⚠ validation failed: ${err.message}`))
-          if (!process.stdin.isTTY) break
-          const fix = await confirm({ message: 'Fix credentials now?', default: true })
-          if (!fix) break
-          const newClientId = await input({
-            message: 'client_id:',
-            default: appConfig.client_id,
-            validate: (v) => validateClientId(provider.id, v),
-          })
-          const newDomain = await input({
-            message: 'allowed_domain:',
-            default: appConfig.allowed_domain,
-            validate: validateDomain,
-          })
-          appConfig = { client_id: newClientId, allowed_domain: newDomain }
-          const raw = yaml.load(readFileSync(configPath, 'utf8'))
-          raw.integrations[providerDef.configKey] = appConfig
-          writeFileSync(configPath, yaml.dump(raw, { lineWidth: -1 }))
+          console.error(chalk.yellow(`  Fix your credentials and re-run: upstream auth ${provider.id}`))
         }
       }
     }

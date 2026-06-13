@@ -123,13 +123,5 @@ export async function runWizard(prefilled = {}) {
     }
   }
 
-  let validate = false
-  if (providers.length > 0 && process.stdin.isTTY) {
-    validate = await confirm({
-      message: 'Validate integration now? (opens browser to test OAuth — no credentials saved)',
-      default: true,
-    })
-  }
-
-  return { docs_storage, docs_path, providers, guardian, ...orgDefaults, validate }
+  return { docs_storage, docs_path, providers, guardian, ...orgDefaults }
 }

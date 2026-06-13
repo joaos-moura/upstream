@@ -26,6 +26,8 @@ export const PROVIDERS = {
     domainField: 'allowed_domain',
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     scopes: [
+      'openid',
+      'email',
       'https://www.googleapis.com/auth/drive.metadata.readonly',
       'https://www.googleapis.com/auth/drive.file',
     ],
