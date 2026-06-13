@@ -44,7 +44,7 @@ src/
     auth/
       oauth2.js             # OAuth2 + PKCE flow (generatePKCE, browser → localhost → token exchange)
     providers/
-      registry.js           # PROVIDERS map — all provider definitions
+      registry.js           # PROVIDERS map — all provider definitions; callbackPort for fixed-port providers
       google-docs.js        # Drive API: extractId, exchangeCode (PKCE), getMetadata, refresh
       confluence.js         # Confluence API: extractId, exchangeCode (PKCE), getMetadata, refresh
     mcp/
@@ -74,7 +74,7 @@ tests/
 **Key design decisions:**
 
 - **ESM throughout** — the package uses `"type": "module"`. All imports use ESM syntax (`import`/`export`). No CommonJS.
-- **PKCE for all providers** — all OAuth flows use PKCE (RFC 7636). `upstream.config.yaml` only needs `client_id` and `allowed_domain`. Google Docs requires a `client_secret` (Google does not support public clients) — it is loaded from `UPSTREAM_GOOGLE_CLIENT_SECRET` in the developer's `.env` file and never committed. Confluence is pure PKCE with no `client_secret`.
+- **PKCE + client_secret for all current providers** — all OAuth flows use PKCE (RFC 7636). `upstream.config.yaml` only stores `client_id` and `allowed_domain`. Both Google Docs and Confluence require a `client_secret` for token exchange (neither supports public clients) — secrets are loaded from `UPSTREAM_GOOGLE_CLIENT_SECRET` / `UPSTREAM_CONFLUENCE_CLIENT_SECRET` env vars and never committed. `upstream init` writes placeholders to `.env`, `.env.local`, and `.env.example`. If a future provider is a true public client, set no `callbackPort` and omit `client_secret` from `exchangeCode`.
 - **Config is committed, tokens are not** — `upstream.config.yaml` belongs in the repo (set by platform engineers). `~/.upstream/tokens.json` is per-developer and never committed.
 - **Skills are markdown** — `upstream-guard.md`, `upstream-prd.md`, `upstream-adr.md` are instruction files for Claude Code, not code. Changes to them change Claude's behavior.
 - **Wizard generates config** — `upstream init` runs an interactive wizard that writes `upstream.config.yaml` from answers rather than copying a static template. Non-interactive mode via `--from file.json` or `--yes`. Provider selection uses a single `select` prompt (one provider per init run). `validateClientId` and `validateDomain` are exported from `wizard.js` for inline format validation.
@@ -115,6 +115,7 @@ upstream currently supports Google Docs and Confluence. To add a new provider:
    - `scopes` — required OAuth scopes
    - `authParams` — extra query params for the auth URL
    - `supportsRefresh` — whether the provider issues refresh tokens
+   - `callbackPort` — fixed port for the local OAuth callback server, if the provider requires an exact registered redirect URI (e.g. Confluence uses `27182`). Omit for providers that accept any localhost port (e.g. Google Desktop app).
 
 3. **Update `templates/upstream.config.yaml`** — add a commented example for the new provider's credentials.
 
@@ -122,7 +123,7 @@ upstream currently supports Google Docs and Confluence. To add a new provider:
 
 5. **Update wizard if needed** — if the provider needs special config fields beyond `client_id` + `allowed_domain`, update `src/lib/wizard.js` to collect them in Phase 1.
 
-**Note on PKCE:** All providers in upstream use PKCE. When implementing `exchangeCode`, include `code_verifier` in the token request body and omit `client_secret`. If a provider does not support PKCE, it cannot be added until support is added — open an issue instead.
+**Note on secrets and PKCE:** All providers use PKCE. Both current providers also require a `client_secret` in `exchangeCode` — read it from `process.env.UPSTREAM_<PROVIDER>_CLIENT_SECRET` and throw if unset (see `google-docs.js` or `confluence.js` for the pattern). If you're adding a true public client (no secret), omit that check. If the provider requires a registered redirect URI, set `callbackPort` in the registry entry and document the URL developers must register.
 
 ---
 

@@ -133,9 +133,7 @@ If your team stores PRDs and ADRs in an external tool, set `docs_storage: link`.
 
 upstream uses **PKCE** (Proof Key for Code Exchange, RFC 7636) for all OAuth flows. Only `client_id` and `allowed_domain` are stored in `upstream.config.yaml` — never in version control.
 
-**Google Docs** requires a `client_secret` (Google does not support public clients). The secret is stored as `UPSTREAM_GOOGLE_CLIENT_SECRET` in `.env` / `.env.local` and loaded at CLI startup — never committed to the repo. `upstream init` adds the placeholder automatically.
-
-**Confluence** is pure PKCE — no `client_secret` required.
+Both **Google Docs** and **Confluence** require a `client_secret` — neither supports public OAuth clients. Secrets are stored as env vars (`UPSTREAM_GOOGLE_CLIENT_SECRET`, `UPSTREAM_CONFLUENCE_CLIENT_SECRET`) and loaded at CLI startup. They are never stored in `upstream.config.yaml` or committed to the repo. `upstream init` writes the placeholder to `.env`, `.env.local`, and `.env.example` automatically.
 
 ### Google Docs integration
 
@@ -175,15 +173,28 @@ upstream auth google-docs
 
 1. Create an app at [developer.atlassian.com/console/myapps](https://developer.atlassian.com/console/myapps/)
 2. Enable **OAuth 2.0 (3LO)**
-3. Add scopes: `read:confluence-content.all`, `write:confluence-content`, `offline_access`
-4. Add credentials to `upstream.config.yaml` and commit:
+3. In **Authorization**, add callback URL: `http://localhost:27182/callback`
+4. In **Permissions**, add scopes: `read:confluence-content.all`, `write:confluence-content`
+   - `offline_access` is not listed in Permissions — upstream requests it automatically at auth time
+5. Copy the **Client ID** and **Client secret** from the app's **Settings** tab
+6. Add `client_id` and `allowed_domain` to `upstream.config.yaml` and commit:
 
 ```yaml
 integrations:
   confluence:
-    client_id: "yyy"
-    allowed_domain: "yourcompany.atlassian.net"
+    client_id: "your-client-id"
+    allowed_domain: "yourorg.atlassian.net"
 ```
+
+> `allowed_domain` must be your Atlassian site subdomain (e.g. `acme.atlassian.net`), not your company domain.
+
+Add the `client_secret` to your `.env` / `.env.local` — never commit this file:
+
+```bash
+UPSTREAM_CONFLUENCE_CLIENT_SECRET=your-secret-here
+```
+
+> `upstream init` creates the placeholder in `.env`, `.env.local`, and `.env.example` automatically.
 
 **Each developer authenticates once:**
 
@@ -240,9 +251,11 @@ If a PRD or ADR genuinely isn't needed, developers can skip with a justification
       ADR-link.md               # stub template for link mode
   settings.json                 # MCP server registration (upstream mcp)
 upstream.config.yaml            # org configuration
+.env.example                    # env var placeholders (shows required secrets, safe to commit)
 .github/
   CODEOWNERS                    # guardian entry (if configured)
 <docs_path>/                    # your PRDs, ADRs, and skip log
+  .gitkeep                      # created by upstream init to track the empty dir
 ```
 
 ---
