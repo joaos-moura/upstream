@@ -10,11 +10,13 @@ This keeps your team's reasoning in the repository, not scattered across memory.
 
 ## How it works
 
-After `upstream init`, every Claude Code session on a feature branch gets a context injection:
+After `upstream init`, the first prompt on a feature branch in each Claude Code session gets a context injection:
 
-```
+```text
 UPSTREAM: feature detected without PRD. Invoke upstream-guard before continuing.
 ```
+
+The hook fires at most once per session (tracked via a PPID-based cache file in `/tmp`). Subsequent prompts in the same session are silent.
 
 Claude then runs the `upstream-guard` skill, which:
 
@@ -129,7 +131,11 @@ If your team stores PRDs and ADRs in an external tool, set `docs_storage: link`.
 
 ### OAuth and PKCE
 
-upstream uses **PKCE** (Proof Key for Code Exchange, RFC 7636) for all OAuth flows. This means **no `client_secret` is needed** in `upstream.config.yaml` — only `client_id` and `allowed_domain`. The secret used during token exchange is generated at runtime per-flow and never stored.
+upstream uses **PKCE** (Proof Key for Code Exchange, RFC 7636) for all OAuth flows. Only `client_id` and `allowed_domain` are stored in `upstream.config.yaml` — never in version control.
+
+**Google Docs** requires a `client_secret` (Google does not support public clients). The secret is stored as `UPSTREAM_GOOGLE_CLIENT_SECRET` in `.env` / `.env.local` and loaded at CLI startup — never committed to the repo. `upstream init` adds the placeholder automatically.
+
+**Confluence** is pure PKCE — no `client_secret` required.
 
 ### Google Docs integration
 
@@ -139,7 +145,8 @@ upstream uses **PKCE** (Proof Key for Code Exchange, RFC 7636) for all OAuth flo
 2. Enable the **Google Drive API**
 3. Create an **OAuth 2.0 Client ID** → type: **Desktop app**
    - Desktop app type allows localhost automatically — no redirect URI configuration needed
-4. Add credentials to `upstream.config.yaml` and commit:
+4. Copy the **Client secret** from the credential detail page
+5. Add `client_id` and `allowed_domain` to `upstream.config.yaml` and commit:
 
 ```yaml
 integrations:
@@ -147,6 +154,14 @@ integrations:
     client_id: "xxx.apps.googleusercontent.com"
     allowed_domain: "yourcompany.com"
 ```
+
+Add the `client_secret` to your `.env` / `.env.local` — never commit this file:
+
+```bash
+UPSTREAM_GOOGLE_CLIENT_SECRET=your-secret-here
+```
+
+> `upstream init` creates the placeholder automatically when you choose Google Docs during setup.
 
 **Each developer authenticates once:**
 
@@ -199,7 +214,7 @@ During `upstream init`, you can designate a GitHub handle or email as the guardi
 
 If a PRD or ADR genuinely isn't needed, developers can skip with a justification. The skip is logged to `<docs_path>/SKIPS.md` and a PR snippet is generated for transparency:
 
-```
+```text
 > ⚠️ upstream skip: PRD not created for `feat/quick-fix`.
 > Reason: two-line CSS change, no product decisions involved.
 > Logged in: <docs_path>/SKIPS.md
@@ -209,7 +224,7 @@ If a PRD or ADR genuinely isn't needed, developers can skip with a justification
 
 ## What gets committed to your repo
 
-```
+```text
 .claude/
   hooks/
     upstream-check.sh           # UserPromptSubmit hook

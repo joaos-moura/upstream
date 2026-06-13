@@ -40,7 +40,7 @@ src/
     wizard.js               # interactive two-phase init wizard (@inquirer/prompts)
     scaffold.js             # scaffold files into target repo, generateConfig, writeCodeowners
     settings.js             # write .claude/settings.json MCP entry
-    tokens.js               # read/write ~/.upstream/tokens.json
+    tokens.js               # read/write ~/.upstream/tokens.json; deleteProviderToken for cleanup
     auth/
       oauth2.js             # OAuth2 + PKCE flow (generatePKCE, browser → localhost → token exchange)
     providers/
@@ -74,10 +74,12 @@ tests/
 **Key design decisions:**
 
 - **ESM throughout** — the package uses `"type": "module"`. All imports use ESM syntax (`import`/`export`). No CommonJS.
-- **PKCE, no client_secret** — all OAuth flows use PKCE (RFC 7636). `upstream.config.yaml` only needs `client_id` and `allowed_domain` — no `client_secret` is stored or committed. The PKCE verifier is generated at runtime per-flow.
+- **PKCE for all providers** — all OAuth flows use PKCE (RFC 7636). `upstream.config.yaml` only needs `client_id` and `allowed_domain`. Google Docs requires a `client_secret` (Google does not support public clients) — it is loaded from `UPSTREAM_GOOGLE_CLIENT_SECRET` in the developer's `.env` file and never committed. Confluence is pure PKCE with no `client_secret`.
 - **Config is committed, tokens are not** — `upstream.config.yaml` belongs in the repo (set by platform engineers). `~/.upstream/tokens.json` is per-developer and never committed.
 - **Skills are markdown** — `upstream-guard.md`, `upstream-prd.md`, `upstream-adr.md` are instruction files for Claude Code, not code. Changes to them change Claude's behavior.
-- **Wizard generates config** — `upstream init` runs an interactive wizard that writes `upstream.config.yaml` from answers rather than copying a static template. Non-interactive mode via `--from file.json` or `--yes`.
+- **Wizard generates config** — `upstream init` runs an interactive wizard that writes `upstream.config.yaml` from answers rather than copying a static template. Non-interactive mode via `--from file.json` or `--yes`. Provider selection uses a single `select` prompt (one provider per init run). `validateClientId` and `validateDomain` are exported from `wizard.js` for inline format validation.
+- **OAuth validation during init** — after scaffolding, `upstream init` optionally opens a browser to test the integration immediately (`runOAuthFlow` + `deleteProviderToken`). If validation is skipped or fails, developers can re-run `upstream auth <provider>` later.
+- **Session-based hook caching** — `upstream-check.sh` writes `/tmp/upstream-checked-{PPID}-{slug}` on first run. Subsequent prompts in the same Claude Code session exit silently. A new session means a new PPID, which means a fresh check.
 
 ---
 
